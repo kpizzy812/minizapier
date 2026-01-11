@@ -1,6 +1,6 @@
 # Progress: мини-Zapier
 
-## Текущий статус: День 2 - Блок 5 + Блок 4 завершены
+## Текущий статус: День 2 - Уведомления об ошибках завершены
 
 ---
 
@@ -60,15 +60,35 @@
 - [ ] Панель input/output
 - [ ] Replay с любого шага
 
-### Блок 7: Дашборд + Деплой (~1.5ч)
-- [ ] Список workflows + история
-- [ ] Статистика выполнений
+### Блок 7: Дашборд + Деплой
+- [x] Список workflows + история выполнений (UI)
+- [x] Статистика выполнений (компонент ExecutionStats)
+- [x] Уведомления об ошибках (email через Resend API)
 - [ ] Docker production build
 - [ ] Деплой на VPS (Traefik + SSL)
 
 ---
 
 ## Лог изменений
+
+### 2026-01-11 (продолжение 4)
+- ✅ **Уведомления об ошибках**: Email notifications при падении workflow
+  - NotificationsModule с Resend API интеграцией
+  - HTML + text email при статусе FAILED
+  - notificationEmail поле в Workflow модели и DTOs
+  - Интеграция в WorkflowProcessor
+  - 11 unit тестов для NotificationsService
+
+### 2026-01-11 (продолжение 3)
+- ✅ **Блок 7 (частично)**: История выполнений UI
+  - ExecutionStats компонент (метрики: total, success, failed, avg duration)
+  - ExecutionList компонент (таблица с фильтрацией и пагинацией)
+  - ExecutionDetails диалог (просмотр шагов, input/output)
+  - Обновлена главная страница с табами (Workflows/Executions)
+  - API клиент для executions endpoints
+  - React Query хуки для данных выполнений
+  - 78 тестов (включая use-executions, components)
+  - Добавлены shadcn/ui: table, tabs, select, scroll-area, skeleton
 
 ### 2026-01-11 (продолжение 2)
 - ✅ **Блок 4 завершён**: Triggers Module
