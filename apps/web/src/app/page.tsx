@@ -1,7 +1,11 @@
+'use client';
+
 import Link from 'next/link';
-import { Plus, Workflow } from 'lucide-react';
+import { Plus, Workflow, History } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { WorkflowList } from '@/components/workflows/workflow-list';
+import { ExecutionStats, ExecutionList } from '@/components/executions';
 
 export default function Home() {
   return (
@@ -24,14 +28,41 @@ export default function Home() {
 
       {/* Main content */}
       <main className="container mx-auto px-4 py-8">
-        <div className="mb-8">
-          <h1 className="text-3xl font-bold">Workflows</h1>
-          <p className="text-muted-foreground">
-            Automate your tasks with visual workflows
-          </p>
-        </div>
+        <Tabs defaultValue="workflows" className="space-y-6">
+          <div className="flex items-center justify-between">
+            <TabsList>
+              <TabsTrigger value="workflows" className="gap-2">
+                <Workflow className="h-4 w-4" />
+                Workflows
+              </TabsTrigger>
+              <TabsTrigger value="executions" className="gap-2">
+                <History className="h-4 w-4" />
+                Executions
+              </TabsTrigger>
+            </TabsList>
+          </div>
 
-        <WorkflowList />
+          <TabsContent value="workflows" className="space-y-6">
+            <div>
+              <h1 className="text-3xl font-bold">Workflows</h1>
+              <p className="text-muted-foreground">
+                Automate your tasks with visual workflows
+              </p>
+            </div>
+            <WorkflowList />
+          </TabsContent>
+
+          <TabsContent value="executions" className="space-y-6">
+            <div>
+              <h1 className="text-3xl font-bold">Execution History</h1>
+              <p className="text-muted-foreground">
+                Monitor and debug your workflow executions
+              </p>
+            </div>
+            <ExecutionStats />
+            <ExecutionList />
+          </TabsContent>
+        </Tabs>
       </main>
     </div>
   );
