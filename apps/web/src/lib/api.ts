@@ -113,6 +113,83 @@ export interface PaginatedExecutions {
   take: number;
 }
 
+// Credential types
+export type CredentialType =
+  | 'TELEGRAM'
+  | 'SMTP'
+  | 'HTTP_BASIC'
+  | 'HTTP_BEARER'
+  | 'HTTP_API_KEY'
+  | 'DATABASE'
+  | 'RESEND';
+
+export interface Credential {
+  id: string;
+  name: string;
+  type: CredentialType;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface TelegramCredentialData {
+  botToken: string;
+}
+
+export interface SmtpCredentialData {
+  host: string;
+  port: number;
+  username: string;
+  password: string;
+  secure?: boolean;
+}
+
+export interface HttpBasicCredentialData {
+  username: string;
+  password: string;
+}
+
+export interface HttpBearerCredentialData {
+  token: string;
+}
+
+export interface HttpApiKeyCredentialData {
+  apiKey: string;
+  headerName?: string;
+}
+
+export interface DatabaseCredentialData {
+  connectionString: string;
+}
+
+export interface ResendCredentialData {
+  apiKey: string;
+}
+
+export type CredentialData =
+  | TelegramCredentialData
+  | SmtpCredentialData
+  | HttpBasicCredentialData
+  | HttpBearerCredentialData
+  | HttpApiKeyCredentialData
+  | DatabaseCredentialData
+  | ResendCredentialData;
+
+export interface CreateCredentialInput {
+  name: string;
+  type: CredentialType;
+  data: CredentialData;
+}
+
+export interface UpdateCredentialInput {
+  name?: string;
+  data?: CredentialData;
+}
+
+export interface CredentialTestResult {
+  success: boolean;
+  message: string;
+}
+
 class ApiClient {
   private baseUrl: string;
 
@@ -228,6 +305,17 @@ class ApiClient {
     return response.data;
   }
 
+  async testWorkflow(id: string, testData?: unknown): Promise<Execution> {
+    const response = await this.request<ApiResponse<Execution>>(
+      `/workflows/${id}/test`,
+      {
+        method: 'POST',
+        body: JSON.stringify({ testData }),
+      }
+    );
+    return response.data;
+  }
+
   // Executions API
   async getExecutions(params: ListExecutionsParams = {}): Promise<PaginatedExecutions> {
     const searchParams = new URLSearchParams();
@@ -263,6 +351,45 @@ class ApiClient {
 
   async cancelExecution(id: string): Promise<Execution> {
     return this.request<Execution>(`/executions/${id}/cancel`, {
+      method: 'POST',
+    });
+  }
+
+  // Credentials API
+  async getCredentials(): Promise<Credential[]> {
+    const response = await this.request<ApiResponse<Credential[]>>('/credentials');
+    return response.data;
+  }
+
+  async getCredential(id: string): Promise<Credential> {
+    const response = await this.request<ApiResponse<Credential>>(`/credentials/${id}`);
+    return response.data;
+  }
+
+  async createCredential(input: CreateCredentialInput): Promise<Credential> {
+    const response = await this.request<ApiResponse<Credential>>('/credentials', {
+      method: 'POST',
+      body: JSON.stringify(input),
+    });
+    return response.data;
+  }
+
+  async updateCredential(id: string, input: UpdateCredentialInput): Promise<Credential> {
+    const response = await this.request<ApiResponse<Credential>>(`/credentials/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify(input),
+    });
+    return response.data;
+  }
+
+  async deleteCredential(id: string): Promise<void> {
+    await this.request(`/credentials/${id}`, {
+      method: 'DELETE',
+    });
+  }
+
+  async testCredential(id: string): Promise<CredentialTestResult> {
+    return this.request<CredentialTestResult>(`/credentials/${id}/test`, {
       method: 'POST',
     });
   }

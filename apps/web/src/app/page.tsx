@@ -1,11 +1,12 @@
 'use client';
 
 import Link from 'next/link';
-import { Plus, Workflow, History } from 'lucide-react';
+import { Plus, Workflow, History, Key } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { WorkflowList } from '@/components/workflows/workflow-list';
 import { ExecutionStats, ExecutionList } from '@/components/executions';
+import { CredentialList } from '@/components/credentials';
 import { UserMenu } from '@/components/auth/user-menu';
 
 export default function Home() {
@@ -43,6 +44,10 @@ export default function Home() {
                 <History className="h-4 w-4" />
                 Executions
               </TabsTrigger>
+              <TabsTrigger value="credentials" className="gap-2">
+                <Key className="h-4 w-4" />
+                Credentials
+              </TabsTrigger>
             </TabsList>
           </div>
 
@@ -65,6 +70,16 @@ export default function Home() {
             </div>
             <ExecutionStats />
             <ExecutionList />
+          </TabsContent>
+
+          <TabsContent value="credentials" className="space-y-6">
+            <div>
+              <h1 className="text-3xl font-bold">Credentials</h1>
+              <p className="text-muted-foreground">
+                Manage your API keys, tokens, and connection secrets
+              </p>
+            </div>
+            <CredentialList />
           </TabsContent>
         </Tabs>
       </main>
