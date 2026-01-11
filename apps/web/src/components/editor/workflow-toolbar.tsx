@@ -2,13 +2,14 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { Save, Play, ArrowLeft, Settings } from 'lucide-react';
+import { Save, Play, ArrowLeft, Settings, AlertTriangle } from 'lucide-react';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { useWorkflowStore } from '@/stores/workflow-store';
 import { useCreateWorkflow, useUpdateWorkflow } from '@/hooks/use-workflows';
+import { validateWorkflow, ValidationResult } from '@/lib/workflow-validator';
 
 interface WorkflowToolbarProps {
   workflowId?: string;
@@ -19,13 +20,44 @@ export function WorkflowToolbar({ workflowId }: WorkflowToolbarProps) {
   const { workflowName, setWorkflowName, setWorkflowId, nodes, edges } =
     useWorkflowStore();
   const [isEditing, setIsEditing] = useState(false);
+  const [validation, setValidation] = useState<ValidationResult | null>(null);
 
   const createWorkflow = useCreateWorkflow();
   const updateWorkflow = useUpdateWorkflow();
 
   const isSaving = createWorkflow.isPending || updateWorkflow.isPending;
 
+  const handleValidate = (): ValidationResult => {
+    const result = validateWorkflow(
+      nodes.map((n) => ({ id: n.id, type: n.type, data: n.data })),
+      edges.map((e) => ({
+        id: e.id,
+        source: e.source,
+        target: e.target,
+        sourceHandle: e.sourceHandle,
+      }))
+    );
+    setValidation(result);
+    return result;
+  };
+
   const handleSave = async () => {
+    // Validate before saving
+    const result = handleValidate();
+
+    if (!result.isValid) {
+      // Show all errors
+      result.errors.forEach((error) => {
+        toast.error(error.message);
+      });
+      return;
+    }
+
+    // Show warnings but continue
+    result.warnings.forEach((warning) => {
+      toast.warning(warning.message);
+    });
+
     const definition = {
       nodes: nodes.map((node) => ({
         id: node.id,
@@ -69,6 +101,16 @@ export function WorkflowToolbar({ workflowId }: WorkflowToolbarProps) {
   };
 
   const handleTest = async () => {
+    // Validate before testing
+    const result = handleValidate();
+
+    if (!result.isValid) {
+      result.errors.forEach((error) => {
+        toast.error(error.message);
+      });
+      return;
+    }
+
     // TODO: Implement test execution
     toast.info('Test execution coming soon!');
   };
@@ -106,10 +148,26 @@ export function WorkflowToolbar({ workflowId }: WorkflowToolbarProps) {
         <Badge variant="outline">{workflowId ? 'Saved' : 'New'}</Badge>
       </div>
 
-      {/* Center section - stats */}
+      {/* Center section - stats & validation */}
       <div className="flex items-center gap-4 text-sm text-muted-foreground">
         <span>{nodes.length} nodes</span>
         <span>{edges.length} connections</span>
+        {validation && !validation.isValid && (
+          <span className="flex items-center gap-1 text-destructive">
+            <AlertTriangle className="h-4 w-4" />
+            {validation.errors.length} error
+            {validation.errors.length !== 1 ? 's' : ''}
+          </span>
+        )}
+        {validation &&
+          validation.isValid &&
+          validation.warnings.length > 0 && (
+            <span className="flex items-center gap-1 text-yellow-600">
+              <AlertTriangle className="h-4 w-4" />
+              {validation.warnings.length} warning
+              {validation.warnings.length !== 1 ? 's' : ''}
+            </span>
+          )}
       </div>
 
       {/* Right section */}
