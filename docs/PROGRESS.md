@@ -23,9 +23,11 @@
   - Сохранение sampleData для Data Picker
 
 ### Важные (из SPEC)
-- [ ] **Пауза workflow** - логика для статуса PAUSED
-  - API endpoint для паузы/возобновления
-  - UI кнопка в списке workflows
+- [x] **Пауза workflow** - логика для статуса PAUSED ✅
+  - Интеграция ScheduleTriggerService в WorkflowsController
+  - При деактивации workflow - pauseSchedule для schedule triggers
+  - При активации workflow - resumeSchedule для schedule triggers
+  - UI кнопка "Activate/Deactivate" в списке workflows
 - [x] **Копирование workflow** - UI кнопка ✅ (backend + frontend готовы)
 
 ### Желательные (улучшения UX)
@@ -102,6 +104,14 @@
 ---
 
 ## Лог изменений
+
+### 2026-01-12 (продолжение 2)
+- ✅ **Пауза workflow**: Интеграция schedule triggers с activate/deactivate
+  - findByWorkflowIdSafe метод в TriggersService
+  - Интеграция ScheduleTriggerService в WorkflowsController
+  - При деактивации workflow вызывается pauseSchedule
+  - При активации workflow вызывается resumeSchedule
+  - Исправлена типизация в transform.action.ts
 
 ### 2026-01-12 (продолжение)
 - ✅ **Credentials UI**: Страница управления подключениями
