@@ -3,10 +3,12 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Save, Play, ArrowLeft, Settings } from 'lucide-react';
+import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { useWorkflowStore } from '@/stores/workflow-store';
+import { useCreateWorkflow, useUpdateWorkflow } from '@/hooks/use-workflows';
 
 interface WorkflowToolbarProps {
   workflowId?: string;
@@ -14,30 +16,61 @@ interface WorkflowToolbarProps {
 
 export function WorkflowToolbar({ workflowId }: WorkflowToolbarProps) {
   const router = useRouter();
-  const { workflowName, setWorkflowName, nodes, edges } = useWorkflowStore();
+  const { workflowName, setWorkflowName, setWorkflowId, nodes, edges } =
+    useWorkflowStore();
   const [isEditing, setIsEditing] = useState(false);
-  const [isSaving, setIsSaving] = useState(false);
+
+  const createWorkflow = useCreateWorkflow();
+  const updateWorkflow = useUpdateWorkflow();
+
+  const isSaving = createWorkflow.isPending || updateWorkflow.isPending;
 
   const handleSave = async () => {
-    setIsSaving(true);
-    try {
-      // TODO: Implement save to API
-      console.log('Saving workflow:', {
-        id: workflowId,
-        name: workflowName,
-        definition: { nodes, edges },
-      });
+    const definition = {
+      nodes: nodes.map((node) => ({
+        id: node.id,
+        type: node.type,
+        position: node.position,
+        data: node.data,
+      })),
+      edges: edges.map((edge) => ({
+        id: edge.id,
+        source: edge.source,
+        target: edge.target,
+        sourceHandle: edge.sourceHandle,
+        targetHandle: edge.targetHandle,
+      })),
+    };
 
-      // Simulate API call
-      await new Promise((resolve) => setTimeout(resolve, 500));
-    } finally {
-      setIsSaving(false);
+    try {
+      if (workflowId) {
+        // Update existing workflow
+        await updateWorkflow.mutateAsync({
+          id: workflowId,
+          input: { name: workflowName, definition },
+        });
+        toast.success('Workflow saved successfully');
+      } else {
+        // Create new workflow
+        const newWorkflow = await createWorkflow.mutateAsync({
+          name: workflowName,
+          definition,
+        });
+        setWorkflowId(newWorkflow.id);
+        // Navigate to the new workflow URL
+        router.replace(`/editor/${newWorkflow.id}`);
+        toast.success('Workflow created successfully');
+      }
+    } catch (error) {
+      toast.error(
+        error instanceof Error ? error.message : 'Failed to save workflow'
+      );
     }
   };
 
   const handleTest = async () => {
     // TODO: Implement test execution
-    console.log('Testing workflow');
+    toast.info('Test execution coming soon!');
   };
 
   const handleBack = () => {
@@ -70,9 +103,7 @@ export function WorkflowToolbar({ workflowId }: WorkflowToolbarProps) {
           </button>
         )}
 
-        <Badge variant="outline">
-          {workflowId ? 'Draft' : 'New'}
-        </Badge>
+        <Badge variant="outline">{workflowId ? 'Saved' : 'New'}</Badge>
       </div>
 
       {/* Center section - stats */}

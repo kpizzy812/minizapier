@@ -1,7 +1,7 @@
 import Link from 'next/link';
 import { Plus, Workflow } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { WorkflowList } from '@/components/workflows/workflow-list';
 
 export default function Home() {
   return (
@@ -31,26 +31,7 @@ export default function Home() {
           </p>
         </div>
 
-        {/* Empty state */}
-        <Card className="mx-auto max-w-md text-center">
-          <CardHeader>
-            <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-primary/10">
-              <Workflow className="h-6 w-6 text-primary" />
-            </div>
-            <CardTitle>No workflows yet</CardTitle>
-            <CardDescription>
-              Create your first workflow to start automating tasks
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <Button asChild className="w-full">
-              <Link href="/editor">
-                <Plus className="mr-2 h-4 w-4" />
-                Create Workflow
-              </Link>
-            </Button>
-          </CardContent>
-        </Card>
+        <WorkflowList />
       </main>
     </div>
   );
