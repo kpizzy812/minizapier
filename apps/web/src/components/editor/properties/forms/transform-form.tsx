@@ -36,8 +36,8 @@ export function TransformForm({ data, onUpdate }: TransformFormProps) {
           onValueChange={(v) => onUpdate({ transformType: v })}
         >
           <TabsList className="grid w-full grid-cols-2">
-            <TabsTrigger value="javascript">JavaScript</TabsTrigger>
-            <TabsTrigger value="jsonpath">JSONPath</TabsTrigger>
+            <TabsTrigger value="javascript">Code</TabsTrigger>
+            <TabsTrigger value="jsonpath">Extract Path</TabsTrigger>
           </TabsList>
 
           <TabsContent value="javascript" className="mt-3">
@@ -50,7 +50,7 @@ export function TransformForm({ data, onUpdate }: TransformFormProps) {
 
           <TabsContent value="jsonpath" className="mt-3">
             <div className="rounded-md bg-muted/50 p-2 text-xs text-muted-foreground">
-              Use JSONPath expression to extract data.
+              Extract specific data using a path expression (no coding required).
               <br />
               Example: <code>$.data.items[0].name</code>
             </div>
@@ -109,12 +109,12 @@ export function TransformForm({ data, onUpdate }: TransformFormProps) {
 
       {transformType === 'jsonpath' && (
         <div className="rounded-md border border-dashed p-3">
-          <h4 className="mb-2 text-sm font-medium">JSONPath examples</h4>
+          <h4 className="mb-2 text-sm font-medium">Path examples</h4>
           <ul className="space-y-1 text-xs text-muted-foreground">
-            <li><code className="rounded bg-muted px-1">$.data</code> - Get data field</li>
-            <li><code className="rounded bg-muted px-1">$.items[0]</code> - First item</li>
-            <li><code className="rounded bg-muted px-1">$.items[*].name</code> - All names</li>
-            <li><code className="rounded bg-muted px-1">$..email</code> - All emails (recursive)</li>
+            <li><code className="rounded bg-muted px-1">$.data</code> - Get &quot;data&quot; field</li>
+            <li><code className="rounded bg-muted px-1">$.items[0]</code> - First item in list</li>
+            <li><code className="rounded bg-muted px-1">$.items[*].name</code> - All names from items</li>
+            <li><code className="rounded bg-muted px-1">$..email</code> - Find all emails anywhere</li>
           </ul>
         </div>
       )}

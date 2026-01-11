@@ -1,5 +1,6 @@
 'use client';
 
+import { useState } from 'react';
 import Link from 'next/link';
 import { formatDistanceToNow } from 'date-fns';
 import { Plus, Workflow, MoreVertical, Trash2, Copy, Power } from 'lucide-react';
@@ -21,6 +22,16 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
+import {
   useWorkflows,
   useDeleteWorkflow,
   useDuplicateWorkflow,
@@ -32,15 +43,18 @@ export function WorkflowList() {
   const deleteWorkflow = useDeleteWorkflow();
   const duplicateWorkflow = useDuplicateWorkflow();
   const toggleActive = useToggleWorkflowActive();
+  const [deleteDialog, setDeleteDialog] = useState<{ id: string; name: string } | null>(null);
 
-  const handleDelete = async (id: string, name: string) => {
-    if (!confirm(`Are you sure you want to delete "${name}"?`)) return;
+  const handleDelete = async () => {
+    if (!deleteDialog) return;
 
     try {
-      await deleteWorkflow.mutateAsync(id);
+      await deleteWorkflow.mutateAsync(deleteDialog.id);
       toast.success('Workflow deleted');
     } catch {
       toast.error('Failed to delete workflow');
+    } finally {
+      setDeleteDialog(null);
     }
   };
 
@@ -74,9 +88,9 @@ export function WorkflowList() {
     return (
       <Card className="mx-auto max-w-md text-center">
         <CardHeader>
-          <CardTitle className="text-destructive">Error</CardTitle>
+          <CardTitle className="text-destructive">Unable to load workflows</CardTitle>
           <CardDescription>
-            Failed to load workflows. Make sure the API is running.
+            Please check your connection and try again.
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -113,6 +127,7 @@ export function WorkflowList() {
   }
 
   return (
+    <>
     <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
       {workflows.map((workflow) => (
         <Card key={workflow.id} className="group relative">
@@ -136,6 +151,7 @@ export function WorkflowList() {
                     size="icon"
                     className="relative z-10 h-8 w-8"
                     onClick={(e) => e.stopPropagation()}
+                    title="Workflow actions"
                   >
                     <MoreVertical className="h-4 w-4" />
                   </Button>
@@ -164,7 +180,7 @@ export function WorkflowList() {
                     className="text-destructive"
                     onClick={(e) => {
                       e.stopPropagation();
-                      handleDelete(workflow.id, workflow.name);
+                      setDeleteDialog({ id: workflow.id, name: workflow.name });
                     }}
                   >
                     <Trash2 className="mr-2 h-4 w-4" />
@@ -193,5 +209,27 @@ export function WorkflowList() {
         </Card>
       ))}
     </div>
+
+    {/* Delete confirmation dialog */}
+    <AlertDialog open={!!deleteDialog} onOpenChange={(open) => !open && setDeleteDialog(null)}>
+      <AlertDialogContent>
+        <AlertDialogHeader>
+          <AlertDialogTitle>Delete workflow?</AlertDialogTitle>
+          <AlertDialogDescription>
+            Are you sure you want to delete &quot;{deleteDialog?.name}&quot;? This action cannot be undone.
+          </AlertDialogDescription>
+        </AlertDialogHeader>
+        <AlertDialogFooter>
+          <AlertDialogCancel>Cancel</AlertDialogCancel>
+          <AlertDialogAction
+            onClick={handleDelete}
+            className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+          >
+            Delete
+          </AlertDialogAction>
+        </AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialog>
+    </>
   );
 }

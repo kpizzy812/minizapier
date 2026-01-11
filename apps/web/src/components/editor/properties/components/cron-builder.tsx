@@ -149,7 +149,7 @@ export function CronBuilder({ value, onChange }: CronBuilderProps) {
         <TabsContent value="custom" className="mt-3 space-y-3">
           <div className="space-y-2">
             <Label className="text-xs text-muted-foreground">
-              Cron expression (6 fields)
+              Schedule pattern (for advanced users)
             </Label>
             <Input
               value={customCron}
@@ -158,7 +158,7 @@ export function CronBuilder({ value, onChange }: CronBuilderProps) {
               className="font-mono text-sm"
             />
             <p className="text-xs text-muted-foreground">
-              Format: second minute hour day month weekday
+              6 fields: sec min hour day month weekday (use * for &quot;any&quot;)
             </p>
           </div>
         </TabsContent>
@@ -169,7 +169,7 @@ export function CronBuilder({ value, onChange }: CronBuilderProps) {
         <div className="rounded-md border border-primary/20 bg-primary/5 p-3">
           <p className="text-base font-semibold text-primary">{describeCron(value)}</p>
           <p className="mt-1 text-xs text-muted-foreground">
-            Technical: <code className="rounded bg-muted px-1">{value}</code>
+            Pattern: <code className="rounded bg-muted px-1">{value}</code>
           </p>
         </div>
       )}

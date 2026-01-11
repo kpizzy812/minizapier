@@ -73,8 +73,8 @@ export function WebhookTriggerForm({ data, onUpdate }: WebhookTriggerFormProps) 
 
       {/* Secret for signature verification */}
       <FieldWrapper
-        label="Secret (optional)"
-        hint="Add a secret key to verify webhook signatures. The sender must include HMAC-SHA256 signature in the header."
+        label="Secret Key (optional)"
+        hint="A password to verify requests come from trusted sources. Leave empty if not needed."
       >
         <Input
           type="password"

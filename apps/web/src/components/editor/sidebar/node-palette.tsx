@@ -35,7 +35,7 @@ const nodeDefinitions: NodeDefinition[] = [
   {
     type: 'scheduleTrigger',
     label: 'Schedule',
-    description: 'Triggered by cron schedule',
+    description: 'Runs on a time schedule',
     icon: <Clock className="h-5 w-5" />,
     category: 'trigger',
   },
@@ -86,7 +86,7 @@ const nodeDefinitions: NodeDefinition[] = [
   {
     type: 'condition',
     label: 'Condition',
-    description: 'If/Else branching',
+    description: 'Split flow based on condition',
     icon: <GitBranch className="h-5 w-5" />,
     category: 'logic',
   },

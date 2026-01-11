@@ -3,7 +3,6 @@
 import { useState } from 'react';
 import { formatDistanceToNow, format } from 'date-fns';
 import {
-  Play,
   Square,
   RotateCcw,
   ChevronLeft,
@@ -120,8 +119,9 @@ export function ExecutionList({ workflowId }: ExecutionListProps) {
 
   if (error) {
     return (
-      <div className="text-center py-8 text-muted-foreground">
-        Failed to load executions. Make sure the API is running.
+      <div className="text-center py-8">
+        <p className="text-muted-foreground">Unable to load execution history.</p>
+        <p className="text-sm text-muted-foreground mt-1">Please check your connection and try again.</p>
       </div>
     );
   }
@@ -161,8 +161,13 @@ export function ExecutionList({ workflowId }: ExecutionListProps) {
 
       {/* Table */}
       {executions.length === 0 ? (
-        <div className="text-center py-12 text-muted-foreground">
-          No executions found
+        <div className="text-center py-12">
+          <p className="text-muted-foreground">No workflow runs yet</p>
+          <p className="text-sm text-muted-foreground mt-1">
+            {statusFilter !== 'ALL'
+              ? 'Try changing the status filter above'
+              : 'Executions will appear here when your workflows run'}
+          </p>
         </div>
       ) : (
         <div className="rounded-md border">

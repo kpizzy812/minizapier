@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { Save, Play, ArrowLeft, Settings, AlertTriangle } from 'lucide-react';
+import { Save, Play, ArrowLeft, AlertTriangle } from 'lucide-react';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -123,7 +123,7 @@ export function WorkflowToolbar({ workflowId }: WorkflowToolbarProps) {
     <div className="flex h-14 items-center justify-between border-b bg-background px-4">
       {/* Left section */}
       <div className="flex items-center gap-4">
-        <Button variant="ghost" size="icon" onClick={handleBack}>
+        <Button variant="ghost" size="icon" onClick={handleBack} title="Back to workflows">
           <ArrowLeft className="h-4 w-4" />
         </Button>
 
@@ -180,10 +180,6 @@ export function WorkflowToolbar({ workflowId }: WorkflowToolbarProps) {
         <Button size="sm" onClick={handleSave} disabled={isSaving}>
           <Save className="mr-2 h-4 w-4" />
           {isSaving ? 'Saving...' : 'Save'}
-        </Button>
-
-        <Button variant="ghost" size="icon">
-          <Settings className="h-4 w-4" />
         </Button>
       </div>
     </div>

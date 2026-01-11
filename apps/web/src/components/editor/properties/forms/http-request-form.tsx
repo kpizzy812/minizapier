@@ -65,7 +65,7 @@ export function HttpRequestForm({ data, onUpdate }: HttpRequestFormProps) {
       </FieldWrapper>
 
       {/* Method selection */}
-      <FieldWrapper label="Method" hint="HTTP method to use" required>
+      <FieldWrapper label="Method" hint="GET = read data, POST = send data, PUT/PATCH = update, DELETE = remove" required>
         <Select value={method} onValueChange={(v) => onUpdate({ method: v })}>
           <SelectTrigger>
             <SelectValue>
@@ -98,8 +98,8 @@ export function HttpRequestForm({ data, onUpdate }: HttpRequestFormProps) {
 
       {/* Headers */}
       <FieldWrapper
-        label="Headers"
-        hint="Request headers, one per line in format: Header-Name: value"
+        label="Headers (optional)"
+        hint="Extra info to send with the request. One per line: Name: value"
       >
         <Textarea
           value={headersString}

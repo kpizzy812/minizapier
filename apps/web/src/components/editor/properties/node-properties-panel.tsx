@@ -135,7 +135,7 @@ export function NodePropertiesPanel() {
             <div className={`h-3 w-3 rounded-full ${nodeTypeColors[nodeType]}`} />
             <h2 className="font-semibold">{nodeTypeNames[nodeType]}</h2>
           </div>
-          <Button variant="ghost" size="icon" onClick={handleClose}>
+          <Button variant="ghost" size="icon" onClick={handleClose} title="Close panel">
             <X className="h-4 w-4" />
           </Button>
         </div>
