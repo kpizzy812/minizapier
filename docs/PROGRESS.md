@@ -1,6 +1,6 @@
 # Progress: мини-Zapier
 
-## Текущий статус: День 1 - Блок 2 (Визуальный редактор)
+## Текущий статус: День 1 - Блок 3 (Execution Engine)
 
 ---
 
@@ -12,15 +12,17 @@
 - [x] NestJS scaffold + Swagger + Prisma
 - [x] Next.js 16 + TailwindCSS 4 + shadcn/ui
 - [x] Shared types package
-- [ ] Supabase Auth интеграция
+- [ ] Supabase Auth интеграция (отложено)
 
 ### Блок 2: Визуальный редактор ✅
 - [x] React Flow настройка + Zustand store
 - [x] Кастомные ноды: TriggerNode, ActionNode, ConditionNode
 - [x] Sidebar с палитрой (drag-and-drop)
 - [x] Страница редактора /editor и /editor/[id]
-- [ ] Сохранение/загрузка workflow API
-- [ ] Валидация схемы
+- [x] Сохранение/загрузка workflow API
+- [x] CRUD API для workflows (NestJS + Prisma)
+- [x] TanStack Query интеграция
+- [ ] Валидация схемы (frontend)
 
 ### Блок 3: Execution Engine (~3ч)
 - [ ] BullMQ интеграция
@@ -67,3 +69,6 @@
 - Выбраны вау-фишки: условные ветвления + визуальный дебаггер
 - ✅ **Блок 1 завершён**: Monorepo, Docker, NestJS, Next.js, Prisma, shared types
 - ✅ **Блок 2 завершён**: React Flow кастомные ноды, Sidebar с drag-and-drop, страница редактора
+- ✅ **API интеграция**: Workflows CRUD API (NestJS), TanStack Query hooks, сохранение/загрузка workflow
+- Добавлен WorkflowList компонент на главную страницу
+- Настроен Prisma 7 с driver adapter для PostgreSQL
