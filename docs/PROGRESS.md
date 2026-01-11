@@ -12,10 +12,11 @@
   - Клик → вставка `{{stepId.path.to.field}}`
   - Типизированные иконки для разных типов данных
   - Интеграция в формы: HTTP Request, Email, Telegram, Database
-- [ ] **Credentials UI** - страница управления подключениями
+- [x] **Credentials UI** - страница управления подключениями ✅
   - Список credentials с фильтрацией по типу
-  - Формы создания/редактирования для каждого типа
+  - Формы создания/редактирования для каждого типа (7 типов)
   - Кнопка "Test connection"
+  - Таб Credentials на главной странице
 - [ ] **Тестовый запуск workflow** - (делает другая сессия)
   - API endpoint `POST /workflows/:id/test`
   - Модальное окно для ввода тестовых данных
@@ -25,7 +26,7 @@
 - [ ] **Пауза workflow** - логика для статуса PAUSED
   - API endpoint для паузы/возобновления
   - UI кнопка в списке workflows
-- [ ] **Копирование workflow** - UI кнопка (backend готов)
+- [x] **Копирование workflow** - UI кнопка ✅ (backend + frontend готовы)
 
 ### Желательные (улучшения UX)
 - [ ] **Real-time дебаггер** - WebSocket Gateway, подсветка нод
@@ -101,6 +102,15 @@
 ---
 
 ## Лог изменений
+
+### 2026-01-12 (продолжение)
+- ✅ **Credentials UI**: Страница управления подключениями
+  - CredentialList компонент (список с фильтрацией по типу)
+  - CredentialDialog (формы для 7 типов credentials)
+  - useCredentials хуки (TanStack Query)
+  - API client методы для credentials
+  - Таб Credentials на главной странице
+  - shadcn/ui: switch компонент
 
 ### 2026-01-12
 - ✅ **Data Picker**: Визуальный маппер данных из предыдущих шагов

@@ -117,6 +117,26 @@ export class TriggersService {
   }
 
   /**
+   * Find trigger by workflow ID (safe version - returns null instead of throwing).
+   * Used when we already verified workflow ownership.
+   */
+  async findByWorkflowIdSafe(
+    workflowId: string,
+    userId: string,
+  ): Promise<TriggerResponseDto | null> {
+    const workflow = await this.prisma.workflow.findFirst({
+      where: { id: workflowId, userId },
+      include: { trigger: true },
+    });
+
+    if (!workflow || !workflow.trigger) {
+      return null;
+    }
+
+    return this.toResponseDto(workflow.trigger);
+  }
+
+  /**
    * Find trigger by ID.
    */
   async findOne(id: string, userId: string): Promise<TriggerResponseDto> {

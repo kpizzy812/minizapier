@@ -22,6 +22,8 @@ import { WorkflowsService } from './workflows.service';
 import { CreateWorkflowDto } from './dto/create-workflow.dto';
 import { UpdateWorkflowDto } from './dto/update-workflow.dto';
 import { ExecutionsService } from '../executions/executions.service';
+import { ScheduleTriggerService } from '../triggers/services';
+import { TriggersService } from '../triggers/triggers.service';
 import { CurrentUser } from '../auth';
 
 @ApiTags('workflows')
@@ -31,6 +33,8 @@ export class WorkflowsController {
   constructor(
     private readonly workflowsService: WorkflowsService,
     private readonly executionsService: ExecutionsService,
+    private readonly triggersService: TriggersService,
+    private readonly scheduleTriggerService: ScheduleTriggerService,
   ) {}
 
   @Post()
@@ -103,21 +107,45 @@ export class WorkflowsController {
   }
 
   @Post(':id/activate')
-  @ApiOperation({ summary: 'Activate a workflow' })
+  @ApiOperation({ summary: 'Activate a workflow (resumes schedule triggers)' })
   @ApiResponse({ status: 200, description: 'Workflow activated' })
   @ApiResponse({ status: 404, description: 'Workflow not found' })
   async activate(@CurrentUser('id') userId: string, @Param('id') id: string) {
-    const workflow = await this.workflowsService.setActive(id, userId, true);
-    return { data: workflow, message: 'Workflow activated' };
+    // Verify workflow exists
+    await this.workflowsService.findOne(id, userId);
+
+    // Get trigger for this workflow (returns null if not found, doesn't throw)
+    const trigger = await this.triggersService.findByWorkflowIdSafe(id, userId);
+
+    // Resume schedule trigger if exists
+    if (trigger && trigger.type === 'SCHEDULE') {
+      await this.scheduleTriggerService.resumeSchedule(trigger.id);
+    }
+
+    // Update workflow active state
+    const updated = await this.workflowsService.setActive(id, userId, true);
+    return { data: updated, message: 'Workflow activated' };
   }
 
   @Post(':id/deactivate')
-  @ApiOperation({ summary: 'Deactivate a workflow' })
+  @ApiOperation({ summary: 'Deactivate a workflow (pauses schedule triggers)' })
   @ApiResponse({ status: 200, description: 'Workflow deactivated' })
   @ApiResponse({ status: 404, description: 'Workflow not found' })
   async deactivate(@CurrentUser('id') userId: string, @Param('id') id: string) {
-    const workflow = await this.workflowsService.setActive(id, userId, false);
-    return { data: workflow, message: 'Workflow deactivated' };
+    // Verify workflow exists
+    await this.workflowsService.findOne(id, userId);
+
+    // Get trigger for this workflow (returns null if not found, doesn't throw)
+    const trigger = await this.triggersService.findByWorkflowIdSafe(id, userId);
+
+    // Pause schedule trigger if exists
+    if (trigger && trigger.type === 'SCHEDULE') {
+      await this.scheduleTriggerService.pauseSchedule(trigger.id);
+    }
+
+    // Update workflow active state
+    const updated = await this.workflowsService.setActive(id, userId, false);
+    return { data: updated, message: 'Workflow deactivated' };
   }
 
   @Post(':id/test')
