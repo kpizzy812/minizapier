@@ -1,22 +1,24 @@
 # Progress: мини-Zapier
 
-## Текущий статус: День 1 - Начало
+## Текущий статус: День 1 - Блок 2 (Визуальный редактор)
 
 ---
 
 ## День 1: Фундамент + Редактор + Engine
 
-### Блок 1: Инфраструктура (~2ч)
-- [ ] Monorepo (pnpm workspaces + turbo)
-- [ ] Docker Compose (PostgreSQL, Redis)
-- [ ] NestJS scaffold + Swagger + Prisma
-- [ ] Next.js 16 + TailwindCSS 4 + shadcn/ui
+### Блок 1: Инфраструктура ✅
+- [x] Monorepo (pnpm workspaces + turbo)
+- [x] Docker Compose (PostgreSQL, Redis)
+- [x] NestJS scaffold + Swagger + Prisma
+- [x] Next.js 16 + TailwindCSS 4 + shadcn/ui
+- [x] Shared types package
 - [ ] Supabase Auth интеграция
 
-### Блок 2: Визуальный редактор (~3ч)
-- [ ] React Flow настройка
-- [ ] Кастомные ноды: TriggerNode, ActionNode, ConditionNode
-- [ ] Sidebar с палитрой (drag-and-drop)
+### Блок 2: Визуальный редактор ✅
+- [x] React Flow настройка + Zustand store
+- [x] Кастомные ноды: TriggerNode, ActionNode, ConditionNode
+- [x] Sidebar с палитрой (drag-and-drop)
+- [x] Страница редактора /editor и /editor/[id]
 - [ ] Сохранение/загрузка workflow API
 - [ ] Валидация схемы
 
@@ -63,3 +65,5 @@
 - Создан план проекта
 - Определён стек: NestJS + Next.js 16 + React Flow + BullMQ
 - Выбраны вау-фишки: условные ветвления + визуальный дебаггер
+- ✅ **Блок 1 завершён**: Monorepo, Docker, NestJS, Next.js, Prisma, shared types
+- ✅ **Блок 2 завершён**: React Flow кастомные ноды, Sidebar с drag-and-drop, страница редактора
