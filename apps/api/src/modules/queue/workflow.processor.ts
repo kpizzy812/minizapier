@@ -8,6 +8,7 @@ import { WORKFLOW_QUEUE } from './queue.constants';
 import { WorkflowJobData, ExecutionContext } from './types';
 import { GraphTraverserService } from './services/graph-traverser.service';
 import { StepExecutorService } from './services/step-executor.service';
+import { NotificationsService } from '../notifications';
 
 /**
  * Scheduled job data from trigger scheduler
@@ -36,6 +37,8 @@ export class WorkflowProcessor extends WorkerHost {
     private readonly graphTraverser: GraphTraverserService,
     @Inject(StepExecutorService)
     private readonly stepExecutor: StepExecutorService,
+    @Inject(NotificationsService)
+    private readonly notifications: NotificationsService,
   ) {
     super();
   }
@@ -299,10 +302,66 @@ export class WorkflowProcessor extends WorkerHost {
       updateData.finishedAt = new Date();
     }
 
-    await this.prisma.execution.update({
+    const execution = await this.prisma.execution.update({
       where: { id: executionId },
       data: updateData,
+      include: {
+        workflow: true,
+      },
     });
+
+    // Send error notification if workflow failed and has notification email
+    if (status === 'FAILED' && execution.workflow.notificationEmail) {
+      await this.sendErrorNotification(execution, error || 'Unknown error');
+    }
+  }
+
+  /**
+   * Send error notification for failed workflow execution
+   */
+  private async sendErrorNotification(
+    execution: {
+      id: string;
+      workflowId: string;
+      startedAt: Date;
+      finishedAt: Date | null;
+      workflow: {
+        name: string;
+        notificationEmail: string | null;
+      };
+    },
+    error: string,
+  ): Promise<void> {
+    if (!execution.workflow.notificationEmail) {
+      return;
+    }
+
+    try {
+      const result = await this.notifications.sendWorkflowErrorNotification({
+        workflowId: execution.workflowId,
+        workflowName: execution.workflow.name,
+        executionId: execution.id,
+        error,
+        notificationEmail: execution.workflow.notificationEmail,
+        startedAt: execution.startedAt,
+        finishedAt: execution.finishedAt || new Date(),
+      });
+
+      if (result.success) {
+        this.logger.log(
+          `Error notification sent for execution ${execution.id}`,
+        );
+      } else {
+        this.logger.warn(
+          `Failed to send error notification for execution ${execution.id}: ${result.error}`,
+        );
+      }
+    } catch (err) {
+      this.logger.error(
+        `Error sending notification for execution ${execution.id}`,
+        err instanceof Error ? err.stack : undefined,
+      );
+    }
   }
 
   /**

@@ -18,6 +18,7 @@ export class WorkflowsService {
         name: dto.name,
         description: dto.description,
         definition: dto.definition as unknown as Prisma.InputJsonValue,
+        notificationEmail: dto.notificationEmail,
       },
     });
   }
@@ -100,6 +101,9 @@ export class WorkflowsService {
     if (dto.isActive !== undefined) {
       updateData.isActive = dto.isActive;
     }
+    if (dto.notificationEmail !== undefined) {
+      updateData.notificationEmail = dto.notificationEmail;
+    }
 
     return this.prisma.workflow.update({
       where: { id },
@@ -131,6 +135,7 @@ export class WorkflowsService {
         name: `${original.name} (Copy)`,
         description: original.description,
         definition: original.definition as unknown as Prisma.InputJsonValue,
+        notificationEmail: original.notificationEmail,
       },
     });
   }

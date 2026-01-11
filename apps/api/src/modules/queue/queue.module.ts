@@ -12,6 +12,7 @@ import {
 } from './services';
 import { ActionsModule } from '../actions/actions.module';
 import { CredentialsModule } from '../credentials/credentials.module';
+import { NotificationsModule } from '../notifications';
 
 @Module({
   imports: [
@@ -40,6 +41,7 @@ import { CredentialsModule } from '../credentials/credentials.module';
     PrismaModule,
     ActionsModule,
     CredentialsModule,
+    NotificationsModule,
   ],
   providers: [
     WorkflowProcessor,

@@ -6,6 +6,7 @@ import {
   IsObject,
   ValidateNested,
   IsArray,
+  IsEmail,
 } from 'class-validator';
 import { Type } from 'class-transformer';
 
@@ -98,4 +99,12 @@ export class CreateWorkflowDto {
   @ValidateNested()
   @Type(() => WorkflowDefinitionDto)
   definition: WorkflowDefinitionDto;
+
+  @ApiPropertyOptional({
+    example: 'user@example.com',
+    description: 'Email for error notifications',
+  })
+  @IsOptional()
+  @IsEmail()
+  notificationEmail?: string;
 }

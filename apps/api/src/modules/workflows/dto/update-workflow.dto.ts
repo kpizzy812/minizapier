@@ -1,5 +1,5 @@
 import { ApiPropertyOptional } from '@nestjs/swagger';
-import { IsString, IsOptional, IsObject, IsBoolean } from 'class-validator';
+import { IsString, IsOptional, IsObject, IsBoolean, IsEmail } from 'class-validator';
 
 export class UpdateWorkflowDto {
   @ApiPropertyOptional({ example: 'Updated Workflow Name' })
@@ -36,4 +36,12 @@ export class UpdateWorkflowDto {
   @IsOptional()
   @IsBoolean()
   isActive?: boolean;
+
+  @ApiPropertyOptional({
+    example: 'user@example.com',
+    description: 'Email for error notifications',
+  })
+  @IsOptional()
+  @IsEmail()
+  notificationEmail?: string;
 }

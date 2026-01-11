@@ -11,16 +11,17 @@ datasource db {
 
 // Workflow - main entity
 model Workflow {
-  id          String   @id @default(cuid())
-  userId      String   // Supabase auth.users.id
-  name        String
-  description String?
-  definition  Json     // {nodes: [...], edges: [...], variables: {...}}
-  sampleData  Json?    // Sample data from last test run for Data Picker
-  isActive    Boolean  @default(false)
-  version     Int      @default(1)
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  id                String   @id @default(cuid())
+  userId            String   // Supabase auth.users.id
+  name              String
+  description       String?
+  definition        Json     // {nodes: [...], edges: [...], variables: {...}}
+  sampleData        Json?    // Sample data from last test run for Data Picker
+  isActive          Boolean  @default(false)
+  version           Int      @default(1)
+  notificationEmail String?  // Email for error notifications
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
 
   trigger    Trigger?
   executions Execution[]
