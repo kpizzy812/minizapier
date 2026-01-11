@@ -1,0 +1,51 @@
+# Dependencies
+node_modules
+**/node_modules
+
+# Build outputs
+dist
+**/dist
+.next
+**/.next
+.turbo
+**/.turbo
+
+# Development
+.git
+.gitignore
+*.md
+!README.md
+
+# IDE
+.vscode
+.idea
+*.swp
+*.swo
+
+# Logs
+*.log
+npm-debug.log*
+pnpm-debug.log*
+
+# Tests
+coverage
+**/*.spec.ts
+**/*.test.ts
+test
+**/test
+
+# Environment files (use Docker env instead)
+.env
+.env.local
+.env.*.local
+**/.env
+**/.env.local
+
+# Docker
+Dockerfile
+docker-compose*.yml
+.dockerignore
+
+# Misc
+.DS_Store
+*.tsbuildinfo
