@@ -10,7 +10,6 @@ import {
 } from '@/components/ui/select';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 
 interface CronBuilderProps {
@@ -32,25 +31,60 @@ const presets = [
   { label: 'First day of month', value: '0 0 0 1 * *', description: 'Runs at midnight on the 1st' },
 ];
 
+// Weekday names for human-readable output
+const weekdayNames: Record<string, string> = {
+  '0': 'Sunday', '1': 'Monday', '2': 'Tuesday', '3': 'Wednesday',
+  '4': 'Thursday', '5': 'Friday', '6': 'Saturday', '7': 'Sunday',
+  '1-5': 'weekdays (Mon-Fri)', '0,6': 'weekends',
+};
+
 // Parse cron expression to human readable format
 function describeCron(cron: string): string {
+  // Check presets first
   const preset = presets.find((p) => p.value === cron);
-  if (preset) return preset.description;
+  if (preset) return preset.label;
 
   const parts = cron.split(' ');
-  if (parts.length !== 6) return 'Custom schedule';
+  if (parts.length !== 6) return 'Invalid schedule';
 
-  // Try to generate a simple description
   const [second, minute, hour, day, month, weekday] = parts;
 
+  // Every N minutes: 0 */N * * * *
+  const everyNMinutes = minute.match(/^\*\/(\d+)$/);
+  if (second === '0' && everyNMinutes && hour === '*' && day === '*' && month === '*' && weekday === '*') {
+    return `Every ${everyNMinutes[1]} minutes`;
+  }
+
+  // Every minute: 0 * * * * *
   if (second === '0' && minute === '*' && hour === '*' && day === '*' && month === '*' && weekday === '*') {
     return 'Every minute';
   }
+
+  // Every N hours: 0 0 */N * * *
+  const everyNHours = hour.match(/^\*\/(\d+)$/);
+  if (second === '0' && minute === '0' && everyNHours && day === '*' && month === '*' && weekday === '*') {
+    return `Every ${everyNHours[1]} hours`;
+  }
+
+  // Every hour: 0 0 * * * *
   if (second === '0' && minute === '0' && hour === '*' && day === '*' && month === '*' && weekday === '*') {
     return 'Every hour';
   }
-  if (second === '0' && minute === '0' && hour !== '*' && day === '*' && month === '*' && weekday === '*') {
-    return `Every day at ${hour.padStart(2, '0')}:00`;
+
+  // Specific time every day: 0 M H * * *
+  if (second === '0' && /^\d+$/.test(minute) && /^\d+$/.test(hour) && day === '*' && month === '*' && weekday === '*') {
+    return `Every day at ${hour.padStart(2, '0')}:${minute.padStart(2, '0')}`;
+  }
+
+  // Specific time on weekdays: 0 M H * * 1-5
+  if (second === '0' && /^\d+$/.test(minute) && /^\d+$/.test(hour) && day === '*' && month === '*') {
+    const dayName = weekdayNames[weekday] || `day ${weekday}`;
+    return `${hour.padStart(2, '0')}:${minute.padStart(2, '0')} on ${dayName}`;
+  }
+
+  // First day of month: 0 M H 1 * *
+  if (second === '0' && /^\d+$/.test(minute) && /^\d+$/.test(hour) && day === '1' && month === '*' && weekday === '*') {
+    return `First day of month at ${hour.padStart(2, '0')}:${minute.padStart(2, '0')}`;
   }
 
   return 'Custom schedule';
@@ -130,16 +164,13 @@ export function CronBuilder({ value, onChange }: CronBuilderProps) {
         </TabsContent>
       </Tabs>
 
-      {/* Current schedule display */}
+      {/* Current schedule display - human readable first! */}
       {value && (
-        <div className="rounded-md bg-muted/50 p-3">
-          <div className="flex items-center justify-between">
-            <span className="text-xs text-muted-foreground">Current schedule:</span>
-            <Badge variant="secondary" className="font-mono text-xs">
-              {value}
-            </Badge>
-          </div>
-          <p className="mt-1 text-sm font-medium">{describeCron(value)}</p>
+        <div className="rounded-md border border-primary/20 bg-primary/5 p-3">
+          <p className="text-base font-semibold text-primary">{describeCron(value)}</p>
+          <p className="mt-1 text-xs text-muted-foreground">
+            Technical: <code className="rounded bg-muted px-1">{value}</code>
+          </p>
         </div>
       )}
     </div>
