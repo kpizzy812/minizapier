@@ -22,7 +22,7 @@
 - [x] Сохранение/загрузка workflow API
 - [x] CRUD API для workflows (NestJS + Prisma)
 - [x] TanStack Query интеграция
-- [ ] Валидация схемы (frontend)
+- [x] Валидация схемы (frontend) - триггеры, циклы, отключённые ноды, обязательные поля
 
 ### Блок 3: Execution Engine (~3ч)
 - [ ] BullMQ интеграция
@@ -72,3 +72,4 @@
 - ✅ **API интеграция**: Workflows CRUD API (NestJS), TanStack Query hooks, сохранение/загрузка workflow
 - Добавлен WorkflowList компонент на главную страницу
 - Настроен Prisma 7 с driver adapter для PostgreSQL
+- ✅ **Валидация workflow**: проверка триггеров, циклов (DFS), отключённых нод, обязательных полей
