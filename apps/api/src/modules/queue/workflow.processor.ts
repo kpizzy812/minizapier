@@ -1,5 +1,5 @@
 import { Processor, WorkerHost, OnWorkerEvent } from '@nestjs/bullmq';
-import { Logger } from '@nestjs/common';
+import { Logger, Inject } from '@nestjs/common';
 import { Job } from 'bullmq';
 import { WorkflowNode } from '@minizapier/shared';
 import { PrismaService } from '../../prisma/prisma.service';
@@ -8,8 +8,6 @@ import { WORKFLOW_QUEUE } from './queue.constants';
 import { WorkflowJobData, ExecutionContext } from './types';
 import { GraphTraverserService } from './services/graph-traverser.service';
 import { StepExecutorService } from './services/step-executor.service';
-import { TemplateResolverService } from './services/template-resolver.service';
-import { ConditionEvaluatorService } from './services/condition-evaluator.service';
 
 /**
  * BullMQ Processor for workflow execution.
@@ -21,21 +19,14 @@ import { ConditionEvaluatorService } from './services/condition-evaluator.servic
 export class WorkflowProcessor extends WorkerHost {
   private readonly logger = new Logger(WorkflowProcessor.name);
 
-  // Services are injected manually since WorkerHost has specific requirements
-  private readonly graphTraverser: GraphTraverserService;
-  private readonly stepExecutor: StepExecutorService;
-
-  constructor(private readonly prisma: PrismaService) {
+  constructor(
+    private readonly prisma: PrismaService,
+    @Inject(GraphTraverserService)
+    private readonly graphTraverser: GraphTraverserService,
+    @Inject(StepExecutorService)
+    private readonly stepExecutor: StepExecutorService,
+  ) {
     super();
-    // Create service instances manually
-    // In production, these should be properly injected
-    const templateResolver = new TemplateResolverService();
-    const conditionEvaluator = new ConditionEvaluatorService(templateResolver);
-    this.graphTraverser = new GraphTraverserService();
-    this.stepExecutor = new StepExecutorService(
-      templateResolver,
-      conditionEvaluator,
-    );
   }
 
   /**

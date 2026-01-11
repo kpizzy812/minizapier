@@ -10,6 +10,8 @@ import {
   GraphTraverserService,
   StepExecutorService,
 } from './services';
+import { ActionsModule } from '../actions/actions.module';
+import { CredentialsModule } from '../credentials/credentials.module';
 
 @Module({
   imports: [
@@ -36,6 +38,8 @@ import {
       },
     }),
     PrismaModule,
+    ActionsModule,
+    CredentialsModule,
   ],
   providers: [
     WorkflowProcessor,

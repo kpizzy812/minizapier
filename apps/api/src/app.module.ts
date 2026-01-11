@@ -6,6 +6,8 @@ import { PrismaModule } from './prisma/prisma.module';
 import { WorkflowsModule } from './modules/workflows/workflows.module';
 import { ExecutionsModule } from './modules/executions/executions.module';
 import { QueueModule } from './modules/queue/queue.module';
+import { ActionsModule } from './modules/actions/actions.module';
+import { CredentialsModule } from './modules/credentials/credentials.module';
 
 @Module({
   imports: [
@@ -14,6 +16,8 @@ import { QueueModule } from './modules/queue/queue.module';
     }),
     PrismaModule,
     QueueModule,
+    ActionsModule,
+    CredentialsModule,
     WorkflowsModule,
     ExecutionsModule,
   ],
