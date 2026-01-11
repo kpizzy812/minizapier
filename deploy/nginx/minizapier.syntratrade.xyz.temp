@@ -1,0 +1,17 @@
+# Temporary config for SSL certificate generation
+# After certbot, replace with minizapier.syntratrade.xyz
+
+server {
+    listen 80;
+    listen [::]:80;
+    server_name minizapier.syntratrade.xyz;
+
+    location /.well-known/acme-challenge/ {
+        root /var/www/certbot;
+    }
+
+    location / {
+        return 200 'MiniZapier - Waiting for SSL setup';
+        add_header Content-Type text/plain;
+    }
+}

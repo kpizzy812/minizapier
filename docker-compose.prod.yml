@@ -1,0 +1,119 @@
+# ===========================================
+# MiniZapier Docker Compose - Production
+# ===========================================
+# Deploy: docker compose -f docker-compose.prod.yml up -d --build
+# Logs: docker compose -f docker-compose.prod.yml logs -f
+# Stop: docker compose -f docker-compose.prod.yml down
+
+services:
+  # PostgreSQL Database
+  postgres:
+    image: postgres:16-alpine
+    container_name: minizapier-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-minizapier}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-minizapier_secure_2025}
+      POSTGRES_DB: ${POSTGRES_DB:-minizapier}
+    volumes:
+      - minizapier_postgres_data:/var/lib/postgresql/data
+    # Internal network only, no external port exposure needed
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-minizapier} -d ${POSTGRES_DB:-minizapier}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - minizapier-network
+
+  # Redis for BullMQ
+  redis:
+    image: redis:7-alpine
+    container_name: minizapier-redis
+    restart: unless-stopped
+    command: redis-server --appendonly yes
+    volumes:
+      - minizapier_redis_data:/data
+    # Internal network only, no external port exposure needed
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - minizapier-network
+
+  # NestJS API
+  api:
+    build:
+      context: .
+      dockerfile: apps/api/Dockerfile
+    container_name: minizapier-api
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:8005:3001"
+    environment:
+      NODE_ENV: production
+      API_PORT: 3001
+      DATABASE_URL: postgresql://${POSTGRES_USER:-minizapier}:${POSTGRES_PASSWORD:-minizapier_secure_2025}@postgres:5432/${POSTGRES_DB:-minizapier}?schema=public
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      # Supabase Auth
+      SUPABASE_URL: ${SUPABASE_URL}
+      SUPABASE_SERVICE_ROLE_KEY: ${SUPABASE_SERVICE_ROLE_KEY}
+      # Resend Email
+      RESEND_API_KEY: ${RESEND_API_KEY:-}
+      RESEND_WEBHOOK_SECRET: ${RESEND_WEBHOOK_SECRET:-}
+      NOTIFICATION_FROM_EMAIL: ${NOTIFICATION_FROM_EMAIL:-MiniZapier <noreply@example.com>}
+      INBOUND_EMAIL_DOMAIN: ${INBOUND_EMAIL_DOMAIN:-inbound.example.com}
+      # Security
+      ENCRYPTION_KEY: ${ENCRYPTION_KEY}
+      API_BASE_URL: ${API_BASE_URL}
+      CORS_ORIGIN: ${CORS_ORIGIN}
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:3001/api"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    networks:
+      - minizapier-network
+
+  # Next.js Frontend
+  web:
+    build:
+      context: .
+      dockerfile: apps/web/Dockerfile
+      args:
+        - NEXT_PUBLIC_SUPABASE_URL=${NEXT_PUBLIC_SUPABASE_URL}
+        - NEXT_PUBLIC_SUPABASE_ANON_KEY=${NEXT_PUBLIC_SUPABASE_ANON_KEY}
+        - NEXT_PUBLIC_API_URL=${NEXT_PUBLIC_API_URL}
+        - NEXT_PUBLIC_SITE_URL=${NEXT_PUBLIC_SITE_URL}
+    container_name: minizapier-web
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:3005:3000"
+    environment:
+      NODE_ENV: production
+      NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL}
+      NEXT_PUBLIC_SUPABASE_URL: ${NEXT_PUBLIC_SUPABASE_URL}
+      NEXT_PUBLIC_SUPABASE_ANON_KEY: ${NEXT_PUBLIC_SUPABASE_ANON_KEY}
+      NEXT_PUBLIC_SITE_URL: ${NEXT_PUBLIC_SITE_URL}
+    depends_on:
+      api:
+        condition: service_healthy
+    networks:
+      - minizapier-network
+
+networks:
+  minizapier-network:
+    driver: bridge
+
+volumes:
+  minizapier_postgres_data:
+  minizapier_redis_data:
