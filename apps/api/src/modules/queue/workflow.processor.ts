@@ -1,7 +1,7 @@
 import { Processor, WorkerHost, OnWorkerEvent } from '@nestjs/bullmq';
 import { Logger, Inject } from '@nestjs/common';
 import { Job } from 'bullmq';
-import { WorkflowNode } from '@minizapier/shared';
+import { WorkflowNode, WorkflowDefinition } from '@minizapier/shared';
 import { PrismaService } from '../../prisma/prisma.service';
 import { Prisma } from '../../../generated/prisma/client';
 import { WORKFLOW_QUEUE } from './queue.constants';
@@ -10,8 +10,19 @@ import { GraphTraverserService } from './services/graph-traverser.service';
 import { StepExecutorService } from './services/step-executor.service';
 
 /**
+ * Scheduled job data from trigger scheduler
+ */
+interface ScheduledJobData {
+  triggerId: string;
+  workflowId: string;
+  userId: string;
+  isScheduled: true;
+}
+
+/**
  * BullMQ Processor for workflow execution.
  * Handles the execution of entire workflows, step by step.
+ * Also processes scheduled trigger jobs.
  */
 @Processor(WORKFLOW_QUEUE, {
   concurrency: 5,
@@ -30,11 +41,117 @@ export class WorkflowProcessor extends WorkerHost {
   }
 
   /**
-   * Main job processor - executes the entire workflow
+   * Main job processor - routes to appropriate handler based on job type
    */
-  async process(job: Job<WorkflowJobData>): Promise<unknown> {
-    const { executionId, definition, triggerData, workflowId } = job.data;
+  async process(
+    job: Job<WorkflowJobData | ScheduledJobData>,
+  ): Promise<unknown> {
+    // Check if this is a scheduled execution job
+    if (job.name === 'scheduled-execution' && 'isScheduled' in job.data) {
+      return this.processScheduledJob(job as Job<ScheduledJobData>);
+    }
 
+    // Otherwise, process as regular workflow execution
+    return this.processWorkflowJob(job as Job<WorkflowJobData>);
+  }
+
+  /**
+   * Process scheduled trigger job - creates execution and runs workflow
+   */
+  private async processScheduledJob(
+    job: Job<ScheduledJobData>,
+  ): Promise<unknown> {
+    const { triggerId, workflowId, userId } = job.data;
+
+    this.logger.log(
+      `Processing scheduled trigger ${triggerId} for workflow ${workflowId}`,
+    );
+
+    try {
+      // Get workflow with trigger
+      const workflow = await this.prisma.workflow.findFirst({
+        where: { id: workflowId, userId },
+        include: { trigger: true },
+      });
+
+      if (!workflow) {
+        this.logger.warn(
+          `Workflow ${workflowId} not found for scheduled trigger ${triggerId}`,
+        );
+        return { success: false, error: 'Workflow not found' };
+      }
+
+      if (!workflow.isActive) {
+        this.logger.log(
+          `Workflow ${workflowId} is not active, skipping scheduled execution`,
+        );
+        return { success: false, error: 'Workflow is not active' };
+      }
+
+      // Build trigger data for scheduled execution
+      const triggerData = {
+        type: 'schedule',
+        triggerId,
+        scheduledAt: new Date().toISOString(),
+        timestamp: new Date().toISOString(),
+      };
+
+      // Create execution record
+      const execution = await this.prisma.execution.create({
+        data: {
+          workflowId,
+          status: 'PENDING',
+          input: triggerData as object,
+        },
+      });
+
+      this.logger.log(
+        `Created scheduled execution ${execution.id} for workflow ${workflowId}`,
+      );
+
+      // Execute the workflow inline (not queuing another job)
+      const definition = workflow.definition as unknown as WorkflowDefinition;
+      return this.executeWorkflow(
+        execution.id,
+        workflowId,
+        definition,
+        triggerData,
+      );
+    } catch (error) {
+      this.logger.error(
+        `Failed to process scheduled trigger ${triggerId}`,
+        error instanceof Error ? error.stack : undefined,
+      );
+      throw error;
+    }
+  }
+
+  /**
+   * Process regular workflow execution job
+   */
+  private async processWorkflowJob(
+    job: Job<WorkflowJobData>,
+  ): Promise<unknown> {
+    const { executionId, definition, triggerData, workflowId } = job.data;
+    return this.executeWorkflow(
+      executionId,
+      workflowId,
+      definition,
+      triggerData,
+      job,
+    );
+  }
+
+  /**
+   * Execute workflow with given parameters
+   */
+  private async executeWorkflow(
+    executionId: string,
+    workflowId: string,
+    definition: WorkflowDefinition,
+    triggerData: unknown,
+    job?: Job<WorkflowJobData>,
+  ): Promise<unknown> {
     this.logger.log(
       `Starting workflow execution: ${executionId} for workflow: ${workflowId}`,
     );
@@ -119,12 +236,14 @@ export class WorkflowProcessor extends WorkerHost {
           nodesToSkip.forEach((n) => skippedNodes.add(n));
         }
 
-        // Update job progress
-        const progress = Math.round(
-          ((executionOrder.indexOf(orderItem) + 1) / executionOrder.length) *
-            100,
-        );
-        await job.updateProgress(progress);
+        // Update job progress (only if job exists)
+        if (job) {
+          const progress = Math.round(
+            ((executionOrder.indexOf(orderItem) + 1) / executionOrder.length) *
+              100,
+          );
+          await job.updateProgress(progress);
+        }
       }
 
       // All steps completed successfully

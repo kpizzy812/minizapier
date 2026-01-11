@@ -1,6 +1,6 @@
 # Progress: мини-Zapier
 
-## Текущий статус: День 2 - Блок 5 завершён (Actions + Credentials)
+## Текущий статус: День 2 - Блок 5 + Блок 4 завершены
 
 ---
 
@@ -37,10 +37,12 @@
 
 ## День 2: Триггеры + Actions + Дебаггер + Деплой
 
-### Блок 4: Триггеры (~2ч)
-- [ ] Webhook триггер (уникальный URL)
-- [ ] Schedule триггер (cron через BullMQ repeatable)
-- [ ] Email триггер (webhook от провайдера)
+### Блок 4: Триггеры ✅
+- [x] Webhook триггер (уникальный URL, HMAC-SHA256 подпись)
+- [x] Schedule триггер (cron через BullMQ repeatable jobs)
+- [x] Email триггер (webhook от SendGrid/Mailgun)
+- [x] TriggersModule (CRUD API + интеграция с ExecutionEngine)
+- [x] WebhooksController (публичные endpoints без авторизации)
 
 ### Блок 5: Actions + Credentials ✅
 - [x] HTTP Request Action (fetch + auth support: basic, bearer, api_key)
@@ -67,6 +69,17 @@
 ---
 
 ## Лог изменений
+
+### 2026-01-11 (продолжение 2)
+- ✅ **Блок 4 завершён**: Triggers Module
+  - WebhookTriggerService (уникальные URL, токены, HMAC-SHA256 подпись)
+  - ScheduleTriggerService (BullMQ repeatable jobs, 6-field cron, timezone)
+  - EmailTriggerService (парсинг SendGrid/Mailgun webhooks)
+  - TriggersService (CRUD, интеграция с BullMQ)
+  - TriggersController (REST API с JWT auth)
+  - WebhooksController (публичные endpoints для приёма webhooks)
+  - Обновлён WorkflowProcessor для scheduled jobs
+  - 98 тестов для всех сервисов
 
 ### 2026-01-11 (продолжение)
 - ✅ **Блок 3 завершён**: Execution Engine с BullMQ

@@ -8,6 +8,7 @@ import { ExecutionsModule } from './modules/executions/executions.module';
 import { QueueModule } from './modules/queue/queue.module';
 import { ActionsModule } from './modules/actions/actions.module';
 import { CredentialsModule } from './modules/credentials/credentials.module';
+import { TriggersModule } from './modules/triggers/triggers.module';
 
 @Module({
   imports: [
@@ -20,6 +21,7 @@ import { CredentialsModule } from './modules/credentials/credentials.module';
     CredentialsModule,
     WorkflowsModule,
     ExecutionsModule,
+    TriggersModule,
   ],
   controllers: [AppController],
   providers: [AppService],
