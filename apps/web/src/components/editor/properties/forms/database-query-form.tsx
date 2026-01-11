@@ -1,9 +1,10 @@
 'use client';
 
 import { Input } from '@/components/ui/input';
-import { Textarea } from '@/components/ui/textarea';
 import { FieldWrapper } from '../components';
 import { AlertTriangle } from 'lucide-react';
+import { TemplateInput } from '../../data-picker';
+import { useAvailableData } from '@/hooks/use-available-data';
 
 interface DatabaseQueryFormProps {
   data: Record<string, unknown>;
@@ -11,8 +12,11 @@ interface DatabaseQueryFormProps {
 }
 
 export function DatabaseQueryForm({ data, onUpdate }: DatabaseQueryFormProps) {
+  const sources = useAvailableData();
+
   const label = (data.label as string) || 'Database Query';
   const query = (data.query as string) || '';
+  const params = (data.params as string) || '';
 
   return (
     <div className="space-y-4">
@@ -31,11 +35,28 @@ export function DatabaseQueryForm({ data, onUpdate }: DatabaseQueryFormProps) {
         hint="SQL query to execute. Use $1, $2, etc. for parameters."
         required
       >
-        <Textarea
+        <TemplateInput
           value={query}
-          onChange={(e) => onUpdate({ query: e.target.value })}
-          placeholder="SELECT * FROM users WHERE email = $1"
-          className="min-h-[150px] font-mono text-sm"
+          onChange={(v) => onUpdate({ query: v })}
+          placeholder="SELECT * FROM users WHERE email = $1 AND status = $2"
+          sources={sources}
+          multiline
+          rows={5}
+        />
+      </FieldWrapper>
+
+      {/* Query parameters */}
+      <FieldWrapper
+        label="Parameters (optional)"
+        hint="Values for $1, $2, etc. One per line or comma-separated. Click database icon to insert data."
+      >
+        <TemplateInput
+          value={params}
+          onChange={(v) => onUpdate({ params: v })}
+          placeholder="{{trigger.body.email}}&#10;active"
+          sources={sources}
+          multiline
+          rows={3}
         />
       </FieldWrapper>
 
@@ -57,20 +78,30 @@ export function DatabaseQueryForm({ data, onUpdate }: DatabaseQueryFormProps) {
         <ul className="space-y-1 text-xs text-muted-foreground">
           <li>
             <code className="rounded bg-muted px-1">$1</code> - First parameter
+            (first line in Parameters)
           </li>
           <li>
             <code className="rounded bg-muted px-1">$2</code> - Second parameter
+            (second line)
           </li>
-          <li>Parameters are passed from previous steps or trigger data</li>
+          <li>Parameters are safely escaped to prevent SQL injection</li>
         </ul>
       </div>
 
       <div className="rounded-md border border-dashed p-3">
         <h4 className="mb-2 text-sm font-medium">Output</h4>
         <ul className="space-y-1 text-xs text-muted-foreground">
-          <li><code className="rounded bg-muted px-1">rows</code> - Array of result rows</li>
-          <li><code className="rounded bg-muted px-1">rowCount</code> - Number of affected rows</li>
-          <li><code className="rounded bg-muted px-1">fields</code> - Column names</li>
+          <li>
+            <code className="rounded bg-muted px-1">rows</code> - Array of
+            result rows
+          </li>
+          <li>
+            <code className="rounded bg-muted px-1">rowCount</code> - Number of
+            affected rows
+          </li>
+          <li>
+            <code className="rounded bg-muted px-1">fields</code> - Column names
+          </li>
         </ul>
       </div>
     </div>

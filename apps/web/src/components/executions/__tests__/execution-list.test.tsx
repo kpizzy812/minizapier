@@ -106,7 +106,7 @@ describe('ExecutionList', () => {
     render(<ExecutionList />);
 
     expect(
-      screen.getByText('Failed to load executions. Make sure the API is running.')
+      screen.getByText('Unable to load execution history.')
     ).toBeInTheDocument();
   });
 
@@ -124,7 +124,7 @@ describe('ExecutionList', () => {
 
     render(<ExecutionList />);
 
-    expect(screen.getByText('No executions found')).toBeInTheDocument();
+    expect(screen.getByText('No workflow runs yet')).toBeInTheDocument();
   });
 
   it('renders execution list correctly', () => {

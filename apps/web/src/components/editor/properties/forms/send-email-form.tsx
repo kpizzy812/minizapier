@@ -1,8 +1,9 @@
 'use client';
 
 import { Input } from '@/components/ui/input';
-import { Textarea } from '@/components/ui/textarea';
 import { FieldWrapper } from '../components';
+import { TemplateInput } from '../../data-picker';
+import { useAvailableData } from '@/hooks/use-available-data';
 
 interface SendEmailFormProps {
   data: Record<string, unknown>;
@@ -10,6 +11,8 @@ interface SendEmailFormProps {
 }
 
 export function SendEmailForm({ data, onUpdate }: SendEmailFormProps) {
+  const sources = useAvailableData();
+
   const label = (data.label as string) || 'Send Email';
   const to = (data.to as string) || '';
   const subject = (data.subject as string) || '';
@@ -29,41 +32,44 @@ export function SendEmailForm({ data, onUpdate }: SendEmailFormProps) {
       {/* To */}
       <FieldWrapper
         label="To"
-        hint="Recipient email address. For multiple recipients, separate with comma."
+        hint="Recipient email address. You can use variables or separate multiple with comma."
         required
       >
-        <Input
-          type="email"
+        <TemplateInput
           value={to}
-          onChange={(e) => onUpdate({ to: e.target.value })}
-          placeholder="user@example.com, another@example.com"
+          onChange={(v) => onUpdate({ to: v })}
+          placeholder="{{trigger.body.email}} or user@example.com"
+          sources={sources}
         />
       </FieldWrapper>
 
       {/* Subject */}
       <FieldWrapper
         label="Subject"
-        hint="Email subject line. You can use variables like {{data.name}}"
+        hint="Email subject line. Click the database icon to insert data."
         required
       >
-        <Input
+        <TemplateInput
           value={subject}
-          onChange={(e) => onUpdate({ subject: e.target.value })}
-          placeholder="New order from {{trigger.data.customer}}"
+          onChange={(v) => onUpdate({ subject: v })}
+          placeholder="New order from {{trigger.body.customer}}"
+          sources={sources}
         />
       </FieldWrapper>
 
       {/* Body */}
       <FieldWrapper
         label="Message"
-        hint="Email body. You can use HTML or plain text."
+        hint="Email body. You can use HTML or plain text with variables."
         required
       >
-        <Textarea
+        <TemplateInput
           value={body}
-          onChange={(e) => onUpdate({ body: e.target.value })}
-          placeholder="Hello,&#10;&#10;You have received a new order...&#10;&#10;Order details: {{trigger.data}}"
-          className="min-h-[150px]"
+          onChange={(v) => onUpdate({ body: v })}
+          placeholder="Hello {{trigger.body.name}},&#10;&#10;You have received a new order..."
+          sources={sources}
+          multiline
+          rows={6}
         />
       </FieldWrapper>
 
