@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useRef, type DragEvent } from 'react';
+import { useCallback, useRef, useEffect, type DragEvent } from 'react';
 import {
   ReactFlow,
   Controls,
@@ -87,12 +87,37 @@ export function WorkflowCanvas() {
   const {
     nodes,
     edges,
+    selectedNodeId,
     onNodesChange,
     onEdgesChange,
     onConnect,
     addNode,
     selectNode,
+    deleteNode,
   } = useWorkflowStore();
+
+  // Handle keyboard shortcuts for node deletion
+  useEffect(() => {
+    const handleKeyDown = (event: KeyboardEvent) => {
+      // Check if we're not in an input field
+      const target = event.target as HTMLElement;
+      const isInputField =
+        target.tagName === 'INPUT' ||
+        target.tagName === 'TEXTAREA' ||
+        target.isContentEditable;
+
+      if (isInputField) return;
+
+      // Delete or Backspace to remove selected node
+      if ((event.key === 'Delete' || event.key === 'Backspace') && selectedNodeId) {
+        event.preventDefault();
+        deleteNode(selectedNodeId);
+      }
+    };
+
+    document.addEventListener('keydown', handleKeyDown);
+    return () => document.removeEventListener('keydown', handleKeyDown);
+  }, [selectedNodeId, deleteNode]);
 
   const handleConnect: OnConnect = useCallback(
     (connection) => {
