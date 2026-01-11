@@ -4,6 +4,8 @@ import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { PrismaModule } from './prisma/prisma.module';
 import { WorkflowsModule } from './modules/workflows/workflows.module';
+import { ExecutionsModule } from './modules/executions/executions.module';
+import { QueueModule } from './modules/queue/queue.module';
 
 @Module({
   imports: [
@@ -11,7 +13,9 @@ import { WorkflowsModule } from './modules/workflows/workflows.module';
       isGlobal: true,
     }),
     PrismaModule,
+    QueueModule,
     WorkflowsModule,
+    ExecutionsModule,
   ],
   controllers: [AppController],
   providers: [AppService],

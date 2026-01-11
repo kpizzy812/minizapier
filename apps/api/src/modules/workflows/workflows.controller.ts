@@ -17,10 +17,12 @@ import {
   ApiResponse,
   ApiBearerAuth,
   ApiQuery,
+  ApiBody,
 } from '@nestjs/swagger';
 import { WorkflowsService } from './workflows.service';
 import { CreateWorkflowDto } from './dto/create-workflow.dto';
 import { UpdateWorkflowDto } from './dto/update-workflow.dto';
+import { ExecutionsService } from '../executions/executions.service';
 
 // Temporary: get userId from header until Supabase Auth is integrated
 const getUserId = (headers: Record<string, string>): string => {
@@ -31,7 +33,10 @@ const getUserId = (headers: Record<string, string>): string => {
 @ApiBearerAuth()
 @Controller('workflows')
 export class WorkflowsController {
-  constructor(private readonly workflowsService: WorkflowsService) {}
+  constructor(
+    private readonly workflowsService: WorkflowsService,
+    private readonly executionsService: ExecutionsService,
+  ) {}
 
   @Post()
   @ApiOperation({ summary: 'Create a new workflow' })
@@ -141,5 +146,48 @@ export class WorkflowsController {
     const userId = getUserId(headers);
     const workflow = await this.workflowsService.setActive(id, userId, false);
     return { data: workflow, message: 'Workflow deactivated' };
+  }
+
+  @Post(':id/test')
+  @ApiOperation({
+    summary: 'Run a test execution of the workflow',
+    description:
+      'Triggers a test run of the workflow with optional test data. Returns the created execution.',
+  })
+  @ApiBody({
+    schema: {
+      type: 'object',
+      properties: {
+        testData: {
+          type: 'object',
+          description: 'Optional test data to use as trigger input',
+        },
+      },
+    },
+    required: false,
+  })
+  @ApiResponse({ status: 201, description: 'Test execution started' })
+  @ApiResponse({ status: 404, description: 'Workflow not found' })
+  async test(
+    @Headers() headers: Record<string, string>,
+    @Param('id') id: string,
+    @Body() body?: { testData?: unknown },
+  ) {
+    const userId = getUserId(headers);
+
+    // Verify workflow exists
+    await this.workflowsService.findOne(id, userId);
+
+    // Create test execution
+    const execution = await this.executionsService.create(
+      id,
+      userId,
+      body?.testData || { test: true, timestamp: new Date().toISOString() },
+    );
+
+    return {
+      data: execution,
+      message: 'Test execution started',
+    };
   }
 }

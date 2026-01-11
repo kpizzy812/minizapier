@@ -1,0 +1,13 @@
+import { Module } from '@nestjs/common';
+import { ExecutionsController } from './executions.controller';
+import { ExecutionsService } from './executions.service';
+import { PrismaModule } from '../../prisma/prisma.module';
+import { QueueModule } from '../queue/queue.module';
+
+@Module({
+  imports: [PrismaModule, QueueModule],
+  controllers: [ExecutionsController],
+  providers: [ExecutionsService],
+  exports: [ExecutionsService],
+})
+export class ExecutionsModule {}
