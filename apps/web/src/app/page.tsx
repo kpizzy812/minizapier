@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { WorkflowList } from '@/components/workflows/workflow-list';
 import { ExecutionStats, ExecutionList } from '@/components/executions';
+import { UserMenu } from '@/components/auth/user-menu';
 
 export default function Home() {
   return (
@@ -17,12 +18,15 @@ export default function Home() {
             <Workflow className="h-6 w-6 text-primary" />
             <span className="text-xl font-bold">MiniZapier</span>
           </div>
-          <Button asChild>
-            <Link href="/editor">
-              <Plus className="mr-2 h-4 w-4" />
-              New Workflow
-            </Link>
-          </Button>
+          <div className="flex items-center gap-4">
+            <Button asChild>
+              <Link href="/editor">
+                <Plus className="mr-2 h-4 w-4" />
+                New Workflow
+              </Link>
+            </Button>
+            <UserMenu />
+          </div>
         </div>
       </header>
 

@@ -1,5 +1,7 @@
 import { Injectable, Logger } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import { randomBytes, createHmac, createVerify, timingSafeEqual } from 'crypto';
+import { Resend } from 'resend';
 
 /**
  * Parsed email data from inbound webhook
@@ -20,12 +22,45 @@ export interface ParsedEmailData {
 }
 
 /**
+ * Resend webhook event payload
+ */
+export interface ResendWebhookEvent {
+  type: string;
+  created_at: string;
+  data: {
+    email_id: string;
+    created_at: string;
+    from: string;
+    to: string[];
+    cc?: string[];
+    bcc?: string[];
+    message_id: string;
+    subject: string;
+    attachments?: Array<{
+      id: string;
+      filename: string;
+      content_type: string;
+      content_disposition: string;
+      content_id?: string;
+    }>;
+  };
+}
+
+/**
  * Service for managing email triggers.
- * Handles inbound email webhooks from providers like SendGrid/Mailgun.
+ * Handles inbound email webhooks from providers like SendGrid/Mailgun/Resend.
  */
 @Injectable()
 export class EmailTriggerService {
   private readonly logger = new Logger(EmailTriggerService.name);
+  private readonly resend: Resend | null = null;
+
+  constructor(private readonly configService: ConfigService) {
+    const apiKey = this.configService.get<string>('RESEND_API_KEY');
+    if (apiKey) {
+      this.resend = new Resend(apiKey);
+    }
+  }
 
   /**
    * Generate a unique inbound email address.
@@ -195,6 +230,199 @@ export class EmailTriggerService {
       email: emailData,
       timestamp: emailData.timestamp,
     };
+  }
+
+  /**
+   * Check if payload is from Resend inbound webhook
+   */
+  isResendPayload(body: Record<string, unknown>): boolean {
+    return body.type === 'email.received' && typeof body.data === 'object';
+  }
+
+  /**
+   * Verify Resend webhook signature
+   */
+  verifyResendWebhook(
+    payload: string,
+    headers: Record<string, string>,
+  ): boolean {
+    if (!this.resend) {
+      this.logger.warn('Resend client not configured, skipping verification');
+      return true; // Allow if not configured (dev mode)
+    }
+
+    const webhookSecret = this.configService.get<string>(
+      'RESEND_WEBHOOK_SECRET',
+    );
+    if (!webhookSecret) {
+      this.logger.warn(
+        'RESEND_WEBHOOK_SECRET not configured, skipping verification',
+      );
+      return true; // Allow if not configured (dev mode)
+    }
+
+    try {
+      // Extract Svix headers (case-insensitive)
+      const svixId =
+        headers['svix-id'] || headers['Svix-Id'] || headers['SVIX-ID'];
+      const svixTimestamp =
+        headers['svix-timestamp'] ||
+        headers['Svix-Timestamp'] ||
+        headers['SVIX-TIMESTAMP'];
+      const svixSignature =
+        headers['svix-signature'] ||
+        headers['Svix-Signature'] ||
+        headers['SVIX-SIGNATURE'];
+
+      if (!svixId || !svixTimestamp || !svixSignature) {
+        this.logger.warn('Missing Svix headers for webhook verification');
+        return false;
+      }
+
+      // Use Resend SDK to verify webhook signature
+      this.resend.webhooks.verify({
+        payload,
+        headers: {
+          id: svixId,
+          timestamp: svixTimestamp,
+          signature: svixSignature,
+        },
+        webhookSecret,
+      });
+
+      return true;
+    } catch (error) {
+      this.logger.error('Resend webhook verification failed:', error);
+      return false;
+    }
+  }
+
+  /**
+   * Parse Resend inbound email webhook payload.
+   * Note: This only parses the webhook event. Full content requires API call.
+   */
+  parseResendWebhookPayload(event: ResendWebhookEvent): ParsedEmailData {
+    const { data } = event;
+    return {
+      from: data.from,
+      to: Array.isArray(data.to) ? data.to[0] : data.to,
+      subject: data.subject,
+      // text and html not included in webhook - fetched separately
+      attachments: data.attachments?.map((att) => ({
+        filename: att.filename,
+        contentType: att.content_type,
+        size: 0, // Size not provided in webhook
+      })),
+      timestamp: data.created_at || event.created_at,
+    };
+  }
+
+  /**
+   * Fetch full email content from Resend API
+   */
+  async fetchResendEmailContent(emailId: string): Promise<{
+    text?: string;
+    html?: string;
+    headers?: Record<string, string>;
+  } | null> {
+    if (!this.resend) {
+      this.logger.warn('Resend client not configured');
+      return null;
+    }
+
+    try {
+      const { data, error } = await this.resend.emails.get(emailId);
+
+      if (error) {
+        this.logger.error(`Failed to fetch email ${emailId}: ${error.message}`);
+        return null;
+      }
+
+      // Note: Resend emails.get returns sent email info, not received
+      // For inbound, we need to use the receiving API
+      // The SDK method is: resend.emails.receiving.get(emailId)
+      // But this may not be available in all SDK versions
+      const emailData = data as unknown as Record<string, unknown>;
+      return {
+        text: emailData?.text as string | undefined,
+        html: emailData?.html as string | undefined,
+      };
+    } catch (error) {
+      this.logger.error(`Error fetching email ${emailId}:`, error);
+      return null;
+    }
+  }
+
+  /**
+   * Fetch full email content from Resend Receiving API
+   * Uses direct API call as SDK may not have this method
+   */
+  async fetchResendReceivedEmail(emailId: string): Promise<{
+    text?: string;
+    html?: string;
+    headers?: Record<string, string>;
+  } | null> {
+    const apiKey = this.configService.get<string>('RESEND_API_KEY');
+    if (!apiKey) {
+      this.logger.warn('RESEND_API_KEY not configured');
+      return null;
+    }
+
+    try {
+      const response = await fetch(
+        `https://api.resend.com/emails/${emailId}/content`,
+        {
+          method: 'GET',
+          headers: {
+            Authorization: `Bearer ${apiKey}`,
+            'Content-Type': 'application/json',
+          },
+        },
+      );
+
+      if (!response.ok) {
+        this.logger.error(
+          `Failed to fetch email content: ${response.status} ${response.statusText}`,
+        );
+        return null;
+      }
+
+      const data = (await response.json()) as {
+        text?: string;
+        html?: string;
+        headers?: Record<string, string>;
+      };
+
+      return {
+        text: data.text,
+        html: data.html,
+        headers: data.headers,
+      };
+    } catch (error) {
+      this.logger.error(`Error fetching received email ${emailId}:`, error);
+      return null;
+    }
+  }
+
+  /**
+   * Parse and enrich Resend email with full content
+   */
+  async parseResendPayloadWithContent(
+    body: Record<string, unknown>,
+  ): Promise<ParsedEmailData> {
+    const event = body as unknown as ResendWebhookEvent;
+    const baseData = this.parseResendWebhookPayload(event);
+
+    // Try to fetch full content
+    const content = await this.fetchResendReceivedEmail(event.data.email_id);
+
+    if (content) {
+      baseData.text = content.text;
+      baseData.html = content.html;
+      baseData.headers = content.headers;
+    }
+
+    return baseData;
   }
 
   /**

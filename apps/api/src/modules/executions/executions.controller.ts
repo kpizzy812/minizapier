@@ -1,10 +1,10 @@
-import { Controller, Get, Post, Param, Query, Headers } from '@nestjs/common';
+import { Controller, Get, Post, Param, Query } from '@nestjs/common';
 import {
   ApiTags,
   ApiOperation,
   ApiResponse,
   ApiParam,
-  ApiHeader,
+  ApiBearerAuth,
 } from '@nestjs/swagger';
 import { ExecutionsService } from './executions.service';
 import {
@@ -15,8 +15,10 @@ import {
   StepLogResponseDto,
   ExecutionStatsDto,
 } from './dto/executions.dto';
+import { CurrentUser } from '../auth';
 
 @ApiTags('Executions')
+@ApiBearerAuth()
 @Controller('executions')
 export class ExecutionsController {
   constructor(private readonly executionsService: ExecutionsService) {}
@@ -25,18 +27,13 @@ export class ExecutionsController {
   @ApiOperation({
     summary: 'List all executions with filtering and pagination',
   })
-  @ApiHeader({
-    name: 'x-user-id',
-    description: 'User ID (temp, will be JWT)',
-    required: true,
-  })
   @ApiResponse({ status: 200, type: PaginatedExecutionsResponseDto })
   async findAll(
-    @Headers('x-user-id') userId: string,
+    @CurrentUser('id') userId: string,
     @Query() query: ListExecutionsQueryDto,
   ): Promise<PaginatedExecutionsResponseDto> {
     const { executions, total } = await this.executionsService.findAll(
-      userId || 'demo-user',
+      userId,
       query,
     );
 
@@ -50,101 +47,64 @@ export class ExecutionsController {
 
   @Get('stats')
   @ApiOperation({ summary: 'Get execution statistics' })
-  @ApiHeader({
-    name: 'x-user-id',
-    description: 'User ID (temp, will be JWT)',
-    required: true,
-  })
   @ApiResponse({ status: 200, type: ExecutionStatsDto })
   async getStats(
-    @Headers('x-user-id') userId: string,
+    @CurrentUser('id') userId: string,
     @Query('workflowId') workflowId?: string,
   ): Promise<ExecutionStatsDto> {
-    return this.executionsService.getStats(userId || 'demo-user', workflowId);
+    return this.executionsService.getStats(userId, workflowId);
   }
 
   @Get(':id')
   @ApiOperation({ summary: 'Get execution by ID with step logs' })
   @ApiParam({ name: 'id', description: 'Execution ID' })
-  @ApiHeader({
-    name: 'x-user-id',
-    description: 'User ID (temp, will be JWT)',
-    required: true,
-  })
   @ApiResponse({ status: 200, type: ExecutionWithStepsResponseDto })
   @ApiResponse({ status: 404, description: 'Execution not found' })
   async findOne(
     @Param('id') id: string,
-    @Headers('x-user-id') userId: string,
+    @CurrentUser('id') userId: string,
   ): Promise<ExecutionWithStepsResponseDto> {
-    const execution = await this.executionsService.findOne(
-      id,
-      userId || 'demo-user',
-    );
+    const execution = await this.executionsService.findOne(id, userId);
     return execution as unknown as ExecutionWithStepsResponseDto;
   }
 
   @Get(':id/logs')
   @ApiOperation({ summary: 'Get step logs for an execution' })
   @ApiParam({ name: 'id', description: 'Execution ID' })
-  @ApiHeader({
-    name: 'x-user-id',
-    description: 'User ID (temp, will be JWT)',
-    required: true,
-  })
   @ApiResponse({ status: 200, type: [StepLogResponseDto] })
   @ApiResponse({ status: 404, description: 'Execution not found' })
   async getStepLogs(
     @Param('id') id: string,
-    @Headers('x-user-id') userId: string,
+    @CurrentUser('id') userId: string,
   ): Promise<StepLogResponseDto[]> {
-    const logs = await this.executionsService.getStepLogs(
-      id,
-      userId || 'demo-user',
-    );
+    const logs = await this.executionsService.getStepLogs(id, userId);
     return logs as StepLogResponseDto[];
   }
 
   @Post(':id/replay')
   @ApiOperation({ summary: 'Replay an execution from the beginning' })
   @ApiParam({ name: 'id', description: 'Execution ID to replay' })
-  @ApiHeader({
-    name: 'x-user-id',
-    description: 'User ID (temp, will be JWT)',
-    required: true,
-  })
   @ApiResponse({ status: 201, type: ExecutionResponseDto })
   @ApiResponse({ status: 404, description: 'Execution not found' })
   async replay(
     @Param('id') id: string,
-    @Headers('x-user-id') userId: string,
+    @CurrentUser('id') userId: string,
   ): Promise<ExecutionResponseDto> {
-    const execution = await this.executionsService.replay(
-      id,
-      userId || 'demo-user',
-    );
+    const execution = await this.executionsService.replay(id, userId);
     return execution as ExecutionResponseDto;
   }
 
   @Post(':id/cancel')
   @ApiOperation({ summary: 'Cancel a pending or running execution' })
   @ApiParam({ name: 'id', description: 'Execution ID to cancel' })
-  @ApiHeader({
-    name: 'x-user-id',
-    description: 'User ID (temp, will be JWT)',
-    required: true,
-  })
   @ApiResponse({ status: 200, type: ExecutionResponseDto })
   @ApiResponse({ status: 404, description: 'Execution not found' })
   @ApiResponse({ status: 400, description: 'Cannot cancel this execution' })
   async cancel(
     @Param('id') id: string,
-    @Headers('x-user-id') userId: string,
+    @CurrentUser('id') userId: string,
   ): Promise<ExecutionResponseDto> {
-    const execution = await this.executionsService.cancel(
-      id,
-      userId || 'demo-user',
-    );
+    const execution = await this.executionsService.cancel(id, userId);
     return execution as ExecutionResponseDto;
   }
 }

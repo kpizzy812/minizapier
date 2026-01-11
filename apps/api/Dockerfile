@@ -45,6 +45,11 @@ COPY --from=builder /app/packages/shared/dist ./packages/shared/dist
 COPY --from=builder /app/apps/api/dist ./apps/api/dist
 COPY --from=builder /app/apps/api/generated ./apps/api/generated
 COPY --from=builder /app/apps/api/prisma ./apps/api/prisma
+COPY --from=builder /app/apps/api/prisma.config.ts ./apps/api/prisma.config.ts
+
+# Copy and setup entrypoint script
+COPY apps/api/docker-entrypoint.sh ./apps/api/docker-entrypoint.sh
+RUN chmod +x ./apps/api/docker-entrypoint.sh
 
 # Set environment
 ENV NODE_ENV=production
@@ -54,4 +59,4 @@ EXPOSE 3001
 
 WORKDIR /app/apps/api
 
-CMD ["node", "dist/src/main.js"]
+CMD ["./docker-entrypoint.sh"]

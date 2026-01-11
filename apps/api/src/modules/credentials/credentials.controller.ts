@@ -6,7 +6,6 @@ import {
   Delete,
   Body,
   Param,
-  Headers,
   HttpCode,
   HttpStatus,
 } from '@nestjs/common';
@@ -22,11 +21,7 @@ import {
   UpdateCredentialDto,
   CredentialResponseDto,
 } from './dto/credentials.dto';
-
-// Temporary: get userId from header until Supabase Auth is integrated
-const getUserId = (headers: Record<string, string>): string => {
-  return headers['x-user-id'] || 'temp-user-id';
-};
+import { CurrentUser } from '../auth';
 
 @ApiTags('credentials')
 @ApiBearerAuth()
@@ -42,10 +37,9 @@ export class CredentialsController {
     type: CredentialResponseDto,
   })
   async create(
-    @Headers() headers: Record<string, string>,
+    @CurrentUser('id') userId: string,
     @Body() dto: CreateCredentialDto,
   ) {
-    const userId = getUserId(headers);
     const credential = await this.credentialsService.create(userId, dto);
     return { data: credential, message: 'Credential created successfully' };
   }
@@ -57,8 +51,7 @@ export class CredentialsController {
     description: 'List of credentials',
     type: [CredentialResponseDto],
   })
-  async findAll(@Headers() headers: Record<string, string>) {
-    const userId = getUserId(headers);
+  async findAll(@CurrentUser('id') userId: string) {
     const credentials = await this.credentialsService.findAll(userId);
     return { data: credentials };
   }
@@ -71,11 +64,7 @@ export class CredentialsController {
     type: CredentialResponseDto,
   })
   @ApiResponse({ status: 404, description: 'Credential not found' })
-  async findOne(
-    @Headers() headers: Record<string, string>,
-    @Param('id') id: string,
-  ) {
-    const userId = getUserId(headers);
+  async findOne(@CurrentUser('id') userId: string, @Param('id') id: string) {
     const credential = await this.credentialsService.findOne(id, userId);
     return { data: credential };
   }
@@ -89,11 +78,10 @@ export class CredentialsController {
   })
   @ApiResponse({ status: 404, description: 'Credential not found' })
   async update(
-    @Headers() headers: Record<string, string>,
+    @CurrentUser('id') userId: string,
     @Param('id') id: string,
     @Body() dto: UpdateCredentialDto,
   ) {
-    const userId = getUserId(headers);
     const credential = await this.credentialsService.update(id, userId, dto);
     return { data: credential, message: 'Credential updated successfully' };
   }
@@ -103,11 +91,7 @@ export class CredentialsController {
   @ApiOperation({ summary: 'Delete a credential' })
   @ApiResponse({ status: 200, description: 'Credential deleted successfully' })
   @ApiResponse({ status: 404, description: 'Credential not found' })
-  async remove(
-    @Headers() headers: Record<string, string>,
-    @Param('id') id: string,
-  ) {
-    const userId = getUserId(headers);
+  async remove(@CurrentUser('id') userId: string, @Param('id') id: string) {
     await this.credentialsService.remove(id, userId);
     return { message: 'Credential deleted successfully' };
   }
@@ -126,11 +110,7 @@ export class CredentialsController {
     },
   })
   @ApiResponse({ status: 404, description: 'Credential not found' })
-  async test(
-    @Headers() headers: Record<string, string>,
-    @Param('id') id: string,
-  ) {
-    const userId = getUserId(headers);
+  async test(@CurrentUser('id') userId: string, @Param('id') id: string) {
     const result = await this.credentialsService.testCredential(id, userId);
     return result;
   }

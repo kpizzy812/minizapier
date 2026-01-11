@@ -5,8 +5,20 @@ import {
   WorkflowErrorNotification,
 } from './notifications.service';
 
+// Email call args type
+interface EmailCallArgs {
+  from: string;
+  to: string[];
+  subject: string;
+  html: string;
+  text: string;
+}
+
 // Mock Resend
-const mockSend = jest.fn();
+const mockSend = jest.fn<
+  Promise<{ data: { id: string } | null; error: { message: string } | null }>,
+  [EmailCallArgs]
+>();
 jest.mock('resend', () => ({
   Resend: jest.fn().mockImplementation(() => ({
     emails: {
@@ -15,9 +27,15 @@ jest.mock('resend', () => ({
   })),
 }));
 
+function getLastEmailCall(): EmailCallArgs {
+  const calls = mockSend.mock.calls;
+  const lastCall = calls[calls.length - 1];
+  if (!lastCall) throw new Error('No calls recorded');
+  return lastCall[0];
+}
+
 describe('NotificationsService', () => {
   let service: NotificationsService;
-  let configService: ConfigService;
 
   const mockNotification: WorkflowErrorNotification = {
     workflowId: 'wf-123',
@@ -51,7 +69,6 @@ describe('NotificationsService', () => {
       }).compile();
 
       service = module.get<NotificationsService>(NotificationsService);
-      configService = module.get<ConfigService>(ConfigService);
     });
 
     it('should be defined', () => {
@@ -88,7 +105,7 @@ describe('NotificationsService', () => {
 
         await service.sendWorkflowErrorNotification(mockNotification);
 
-        const callArgs = mockSend.mock.calls[0][0];
+        const callArgs = getLastEmailCall();
         expect(callArgs.html).toContain('Workflow Execution Failed');
         expect(callArgs.html).toContain('Test Workflow');
         expect(callArgs.html).toContain('exec-456');
@@ -110,7 +127,7 @@ describe('NotificationsService', () => {
 
         await service.sendWorkflowErrorNotification(notificationWithHtml);
 
-        const callArgs = mockSend.mock.calls[0][0];
+        const callArgs = getLastEmailCall();
         expect(callArgs.html).not.toContain('<script>');
         expect(callArgs.html).toContain('&lt;script&gt;');
       });
@@ -129,7 +146,7 @@ describe('NotificationsService', () => {
 
         await service.sendWorkflowErrorNotification(quickNotification);
 
-        const callArgs = mockSend.mock.calls[0][0];
+        const callArgs = getLastEmailCall();
         expect(callArgs.html).toContain('500ms');
       });
 
@@ -147,7 +164,7 @@ describe('NotificationsService', () => {
 
         await service.sendWorkflowErrorNotification(slowNotification);
 
-        const callArgs = mockSend.mock.calls[0][0];
+        const callArgs = getLastEmailCall();
         expect(callArgs.html).toContain('5.5s');
       });
 
@@ -206,7 +223,6 @@ describe('NotificationsService', () => {
       }).compile();
 
       service = module.get<NotificationsService>(NotificationsService);
-      configService = module.get<ConfigService>(ConfigService);
     });
 
     it('should return error when Resend is not configured', async () => {
@@ -250,7 +266,7 @@ describe('NotificationsService', () => {
 
       await service.sendWorkflowErrorNotification(mockNotification);
 
-      const callArgs = mockSend.mock.calls[0][0];
+      const callArgs = getLastEmailCall();
       expect(callArgs.from).toBe('MiniZapier <notifications@resend.dev>');
     });
   });

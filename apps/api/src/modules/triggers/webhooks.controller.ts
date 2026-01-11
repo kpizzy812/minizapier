@@ -27,11 +27,13 @@ import { TriggersService } from './triggers.service';
 import { WebhookTriggerService } from './services/webhook-trigger.service';
 import { EmailTriggerService } from './services/email-trigger.service';
 import { ExecutionsService } from '../executions/executions.service';
+import { Public } from '../auth';
 
 /**
  * Public webhook controller for receiving external triggers.
  * No authentication required - uses token-based security.
  */
+@Public()
 @ApiTags('webhooks')
 @Controller('webhooks')
 export class WebhooksController {
@@ -135,7 +137,7 @@ export class WebhooksController {
   @Post('email')
   @HttpCode(HttpStatus.OK)
   @ApiOperation({
-    summary: 'Receive email webhook (SendGrid/Mailgun inbound)',
+    summary: 'Receive email webhook (SendGrid/Mailgun/Resend inbound)',
     description:
       'Endpoint for receiving inbound email webhooks from email providers.',
   })
@@ -145,12 +147,13 @@ export class WebhooksController {
     description: 'Optional token for additional security',
   })
   @ApiResponse({ status: 200, description: 'Email received and processed' })
+  @ApiResponse({ status: 400, description: 'Invalid webhook signature' })
   @ApiResponse({ status: 404, description: 'Email trigger not found' })
   @ApiResponse({ status: 403, description: 'Workflow is not active' })
   async receiveEmailWebhook(
     @Body() body: Record<string, unknown>,
     @Headers() headers: Record<string, string>,
-    @Query('token') _securityToken?: string, // Reserved for future signature verification
+    @Req() req: RawBodyRequest<Request>,
   ) {
     this.logger.log('Received email webhook');
 
@@ -158,7 +161,24 @@ export class WebhooksController {
     let emailData;
     const contentType = headers['content-type'] || '';
 
-    if (contentType.includes('application/json')) {
+    // Check for Resend format first (type: 'email.received')
+    if (this.emailTrigger.isResendPayload(body)) {
+      this.logger.log('Detected Resend inbound email webhook');
+
+      // Verify Resend webhook signature
+      const rawBody = req.rawBody
+        ? req.rawBody.toString('utf8')
+        : JSON.stringify(body);
+
+      const isValid = this.emailTrigger.verifyResendWebhook(rawBody, headers);
+      if (!isValid) {
+        this.logger.warn('Invalid Resend webhook signature');
+        throw new BadRequestException('Invalid webhook signature');
+      }
+
+      // Parse Resend webhook and fetch full content
+      emailData = await this.emailTrigger.parseResendPayloadWithContent(body);
+    } else if (contentType.includes('application/json')) {
       // Likely Mailgun JSON format
       emailData = this.emailTrigger.parseMailgunPayload(body);
     } else if (body.envelope || body.from) {

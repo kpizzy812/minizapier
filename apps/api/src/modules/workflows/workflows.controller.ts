@@ -7,7 +7,6 @@ import {
   Body,
   Param,
   Query,
-  Headers,
   HttpCode,
   HttpStatus,
 } from '@nestjs/common';
@@ -23,11 +22,7 @@ import { WorkflowsService } from './workflows.service';
 import { CreateWorkflowDto } from './dto/create-workflow.dto';
 import { UpdateWorkflowDto } from './dto/update-workflow.dto';
 import { ExecutionsService } from '../executions/executions.service';
-
-// Temporary: get userId from header until Supabase Auth is integrated
-const getUserId = (headers: Record<string, string>): string => {
-  return headers['x-user-id'] || 'temp-user-id';
-};
+import { CurrentUser } from '../auth';
 
 @ApiTags('workflows')
 @ApiBearerAuth()
@@ -42,10 +37,9 @@ export class WorkflowsController {
   @ApiOperation({ summary: 'Create a new workflow' })
   @ApiResponse({ status: 201, description: 'Workflow created successfully' })
   async create(
-    @Headers() headers: Record<string, string>,
+    @CurrentUser('id') userId: string,
     @Body() createDto: CreateWorkflowDto,
   ) {
-    const userId = getUserId(headers);
     const workflow = await this.workflowsService.create(userId, createDto);
     return { data: workflow, message: 'Workflow created successfully' };
   }
@@ -56,11 +50,10 @@ export class WorkflowsController {
   @ApiQuery({ name: 'take', required: false, type: Number })
   @ApiResponse({ status: 200, description: 'List of workflows' })
   async findAll(
-    @Headers() headers: Record<string, string>,
+    @CurrentUser('id') userId: string,
     @Query('skip') skip?: string,
     @Query('take') take?: string,
   ) {
-    const userId = getUserId(headers);
     const result = await this.workflowsService.findAll(userId, {
       skip: skip ? parseInt(skip, 10) : undefined,
       take: take ? parseInt(take, 10) : undefined,
@@ -72,11 +65,7 @@ export class WorkflowsController {
   @ApiOperation({ summary: 'Get a workflow by ID' })
   @ApiResponse({ status: 200, description: 'Workflow details' })
   @ApiResponse({ status: 404, description: 'Workflow not found' })
-  async findOne(
-    @Headers() headers: Record<string, string>,
-    @Param('id') id: string,
-  ) {
-    const userId = getUserId(headers);
+  async findOne(@CurrentUser('id') userId: string, @Param('id') id: string) {
     const workflow = await this.workflowsService.findOne(id, userId);
     return { data: workflow };
   }
@@ -86,11 +75,10 @@ export class WorkflowsController {
   @ApiResponse({ status: 200, description: 'Workflow updated successfully' })
   @ApiResponse({ status: 404, description: 'Workflow not found' })
   async update(
-    @Headers() headers: Record<string, string>,
+    @CurrentUser('id') userId: string,
     @Param('id') id: string,
     @Body() updateDto: UpdateWorkflowDto,
   ) {
-    const userId = getUserId(headers);
     const workflow = await this.workflowsService.update(id, userId, updateDto);
     return { data: workflow, message: 'Workflow updated successfully' };
   }
@@ -100,11 +88,7 @@ export class WorkflowsController {
   @ApiOperation({ summary: 'Delete a workflow' })
   @ApiResponse({ status: 200, description: 'Workflow deleted successfully' })
   @ApiResponse({ status: 404, description: 'Workflow not found' })
-  async remove(
-    @Headers() headers: Record<string, string>,
-    @Param('id') id: string,
-  ) {
-    const userId = getUserId(headers);
+  async remove(@CurrentUser('id') userId: string, @Param('id') id: string) {
     await this.workflowsService.remove(id, userId);
     return { message: 'Workflow deleted successfully' };
   }
@@ -113,11 +97,7 @@ export class WorkflowsController {
   @ApiOperation({ summary: 'Duplicate a workflow' })
   @ApiResponse({ status: 201, description: 'Workflow duplicated successfully' })
   @ApiResponse({ status: 404, description: 'Workflow not found' })
-  async duplicate(
-    @Headers() headers: Record<string, string>,
-    @Param('id') id: string,
-  ) {
-    const userId = getUserId(headers);
+  async duplicate(@CurrentUser('id') userId: string, @Param('id') id: string) {
     const workflow = await this.workflowsService.duplicate(id, userId);
     return { data: workflow, message: 'Workflow duplicated successfully' };
   }
@@ -126,11 +106,7 @@ export class WorkflowsController {
   @ApiOperation({ summary: 'Activate a workflow' })
   @ApiResponse({ status: 200, description: 'Workflow activated' })
   @ApiResponse({ status: 404, description: 'Workflow not found' })
-  async activate(
-    @Headers() headers: Record<string, string>,
-    @Param('id') id: string,
-  ) {
-    const userId = getUserId(headers);
+  async activate(@CurrentUser('id') userId: string, @Param('id') id: string) {
     const workflow = await this.workflowsService.setActive(id, userId, true);
     return { data: workflow, message: 'Workflow activated' };
   }
@@ -139,11 +115,7 @@ export class WorkflowsController {
   @ApiOperation({ summary: 'Deactivate a workflow' })
   @ApiResponse({ status: 200, description: 'Workflow deactivated' })
   @ApiResponse({ status: 404, description: 'Workflow not found' })
-  async deactivate(
-    @Headers() headers: Record<string, string>,
-    @Param('id') id: string,
-  ) {
-    const userId = getUserId(headers);
+  async deactivate(@CurrentUser('id') userId: string, @Param('id') id: string) {
     const workflow = await this.workflowsService.setActive(id, userId, false);
     return { data: workflow, message: 'Workflow deactivated' };
   }
@@ -169,12 +141,10 @@ export class WorkflowsController {
   @ApiResponse({ status: 201, description: 'Test execution started' })
   @ApiResponse({ status: 404, description: 'Workflow not found' })
   async test(
-    @Headers() headers: Record<string, string>,
+    @CurrentUser('id') userId: string,
     @Param('id') id: string,
     @Body() body?: { testData?: unknown },
   ) {
-    const userId = getUserId(headers);
-
     // Verify workflow exists
     await this.workflowsService.findOne(id, userId);
 

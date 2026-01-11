@@ -45,9 +45,7 @@ export class NotificationsService {
     notification: WorkflowErrorNotification,
   ): Promise<{ success: boolean; error?: string }> {
     if (!this.resend) {
-      this.logger.warn(
-        'Cannot send notification - Resend not configured',
-      );
+      this.logger.warn('Cannot send notification - Resend not configured');
       return { success: false, error: 'Notifications not configured' };
     }
 
@@ -63,9 +61,7 @@ export class NotificationsService {
 
     const duration = finishedAt.getTime() - startedAt.getTime();
     const durationStr =
-      duration < 1000
-        ? `${duration}ms`
-        : `${(duration / 1000).toFixed(1)}s`;
+      duration < 1000 ? `${duration}ms` : `${(duration / 1000).toFixed(1)}s`;
 
     const subject = `[MiniZapier] Workflow Failed: ${workflowName}`;
 
@@ -137,15 +133,11 @@ Please review the execution logs for more details.
       });
 
       if (sendError) {
-        this.logger.error(
-          `Failed to send notification: ${sendError.message}`,
-        );
+        this.logger.error(`Failed to send notification: ${sendError.message}`);
         return { success: false, error: sendError.message };
       }
 
-      this.logger.log(
-        `Error notification sent successfully: ${data?.id}`,
-      );
+      this.logger.log(`Error notification sent successfully: ${data?.id}`);
       return { success: true };
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : String(err);

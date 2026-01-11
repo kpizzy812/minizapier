@@ -1,9 +1,8 @@
 // API client for MiniZapier backend
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001/api';
+import { createClient } from '@/lib/supabase/client';
 
-// Temporary user ID until Supabase Auth is integrated
-const TEMP_USER_ID = 'temp-user-id';
+const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001/api';
 
 interface ApiResponse<T> {
   data: T;
@@ -121,17 +120,31 @@ class ApiClient {
     this.baseUrl = baseUrl;
   }
 
+  private async getAuthHeaders(): Promise<Record<string, string>> {
+    const supabase = createClient();
+    const { data: { session } } = await supabase.auth.getSession();
+
+    if (session?.access_token) {
+      return {
+        Authorization: `Bearer ${session.access_token}`,
+      };
+    }
+
+    return {};
+  }
+
   private async request<T>(
     endpoint: string,
     options: RequestInit = {}
   ): Promise<T> {
     const url = `${this.baseUrl}${endpoint}`;
+    const authHeaders = await this.getAuthHeaders();
 
     const response = await fetch(url, {
       ...options,
       headers: {
         'Content-Type': 'application/json',
-        'x-user-id': TEMP_USER_ID,
+        ...authHeaders,
         ...options.headers,
       },
     });

@@ -2,6 +2,7 @@
 
 import { QueryClient, QueryClientProvider, isServer } from '@tanstack/react-query';
 import { ReactNode } from 'react';
+import { AuthProvider } from '@/components/auth/auth-provider';
 
 function makeQueryClient() {
   return new QueryClient({
@@ -37,6 +38,8 @@ export function Providers({ children }: ProvidersProps) {
   const queryClient = getQueryClient();
 
   return (
-    <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
+    <QueryClientProvider client={queryClient}>
+      <AuthProvider>{children}</AuthProvider>
+    </QueryClientProvider>
   );
 }

@@ -6,7 +6,6 @@ import {
   Delete,
   Body,
   Param,
-  Headers,
   HttpCode,
   HttpStatus,
 } from '@nestjs/common';
@@ -23,11 +22,7 @@ import {
   UpdateTriggerDto,
   TriggerResponseDto,
 } from './dto/triggers.dto';
-
-// Temporary: get userId from header until Supabase Auth is integrated
-const getUserId = (headers: Record<string, string>): string => {
-  return headers['x-user-id'] || 'temp-user-id';
-};
+import { CurrentUser } from '../auth';
 
 @ApiTags('triggers')
 @ApiBearerAuth()
@@ -48,10 +43,9 @@ export class TriggersController {
     description: 'Workflow already has a trigger',
   })
   async create(
-    @Headers() headers: Record<string, string>,
+    @CurrentUser('id') userId: string,
     @Body() dto: CreateTriggerDto,
   ) {
-    const userId = getUserId(headers);
     const trigger = await this.triggersService.create(userId, dto);
     return { data: trigger, message: 'Trigger created successfully' };
   }
@@ -66,10 +60,9 @@ export class TriggersController {
   })
   @ApiResponse({ status: 404, description: 'Workflow not found' })
   async findByWorkflow(
-    @Headers() headers: Record<string, string>,
+    @CurrentUser('id') userId: string,
     @Param('workflowId') workflowId: string,
   ) {
-    const userId = getUserId(headers);
     const trigger = await this.triggersService.findByWorkflowId(
       workflowId,
       userId,
@@ -86,11 +79,7 @@ export class TriggersController {
     type: TriggerResponseDto,
   })
   @ApiResponse({ status: 404, description: 'Trigger not found' })
-  async findOne(
-    @Headers() headers: Record<string, string>,
-    @Param('id') id: string,
-  ) {
-    const userId = getUserId(headers);
+  async findOne(@CurrentUser('id') userId: string, @Param('id') id: string) {
     const trigger = await this.triggersService.findOne(id, userId);
     return { data: trigger };
   }
@@ -105,11 +94,10 @@ export class TriggersController {
   })
   @ApiResponse({ status: 404, description: 'Trigger not found' })
   async update(
-    @Headers() headers: Record<string, string>,
+    @CurrentUser('id') userId: string,
     @Param('id') id: string,
     @Body() dto: UpdateTriggerDto,
   ) {
-    const userId = getUserId(headers);
     const trigger = await this.triggersService.update(id, userId, dto);
     return { data: trigger, message: 'Trigger updated successfully' };
   }
@@ -120,11 +108,7 @@ export class TriggersController {
   @ApiParam({ name: 'id', description: 'Trigger ID' })
   @ApiResponse({ status: 200, description: 'Trigger deleted successfully' })
   @ApiResponse({ status: 404, description: 'Trigger not found' })
-  async remove(
-    @Headers() headers: Record<string, string>,
-    @Param('id') id: string,
-  ) {
-    const userId = getUserId(headers);
+  async remove(@CurrentUser('id') userId: string, @Param('id') id: string) {
     await this.triggersService.remove(id, userId);
     return { message: 'Trigger deleted successfully' };
   }
@@ -138,11 +122,7 @@ export class TriggersController {
     type: TriggerResponseDto,
   })
   @ApiResponse({ status: 404, description: 'Trigger not found' })
-  async activate(
-    @Headers() headers: Record<string, string>,
-    @Param('id') id: string,
-  ) {
-    const userId = getUserId(headers);
+  async activate(@CurrentUser('id') userId: string, @Param('id') id: string) {
     const trigger = await this.triggersService.activate(id, userId);
     return { data: trigger, message: 'Trigger activated' };
   }
@@ -156,11 +136,7 @@ export class TriggersController {
     type: TriggerResponseDto,
   })
   @ApiResponse({ status: 404, description: 'Trigger not found' })
-  async deactivate(
-    @Headers() headers: Record<string, string>,
-    @Param('id') id: string,
-  ) {
-    const userId = getUserId(headers);
+  async deactivate(@CurrentUser('id') userId: string, @Param('id') id: string) {
     const trigger = await this.triggersService.deactivate(id, userId);
     return { data: trigger, message: 'Trigger deactivated' };
   }
@@ -178,10 +154,9 @@ export class TriggersController {
   @ApiResponse({ status: 400, description: 'Not a webhook trigger' })
   @ApiResponse({ status: 404, description: 'Trigger not found' })
   async regenerateWebhookUrl(
-    @Headers() headers: Record<string, string>,
+    @CurrentUser('id') userId: string,
     @Param('id') id: string,
   ) {
-    const userId = getUserId(headers);
     const trigger = await this.triggersService.regenerateWebhookUrl(id, userId);
     return { data: trigger, message: 'Webhook URL regenerated' };
   }
