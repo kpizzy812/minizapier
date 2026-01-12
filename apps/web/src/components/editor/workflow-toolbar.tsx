@@ -2,14 +2,14 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
-import { Save, Play, ArrowLeft, AlertTriangle, Loader2, Undo2, Redo2 } from 'lucide-react';
+import { Save, Play, Pause, ArrowLeft, AlertTriangle, Loader2, Undo2, Redo2, Power } from 'lucide-react';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { ThemeToggle } from '@/components/ui/theme-toggle';
 import { useWorkflowStore } from '@/stores/workflow-store';
-import { useCreateWorkflow, useUpdateWorkflow, useTestWorkflow } from '@/hooks/use-workflows';
+import { useCreateWorkflow, useUpdateWorkflow, useTestWorkflow, useWorkflow, useToggleWorkflowActive } from '@/hooks/use-workflows';
 import { validateWorkflow, ValidationResult } from '@/lib/workflow-validator';
 
 interface WorkflowToolbarProps {
@@ -27,9 +27,13 @@ export function WorkflowToolbar({ workflowId, onTestExecutionStart }: WorkflowTo
   const createWorkflow = useCreateWorkflow();
   const updateWorkflow = useUpdateWorkflow();
   const testWorkflow = useTestWorkflow();
+  const { data: workflow } = useWorkflow(workflowId);
+  const toggleActive = useToggleWorkflowActive();
 
   const isSaving = createWorkflow.isPending || updateWorkflow.isPending;
   const isTesting = testWorkflow.isPending;
+  const isToggling = toggleActive.isPending;
+  const isActive = workflow?.isActive ?? false;
 
   // Keyboard shortcuts for undo/redo
   const handleKeyDown = useCallback((e: KeyboardEvent) => {
@@ -166,6 +170,22 @@ export function WorkflowToolbar({ workflowId, onTestExecutionStart }: WorkflowTo
     router.push('/');
   };
 
+  const handleToggleActive = async () => {
+    if (!workflowId) {
+      toast.error('Please save the workflow first');
+      return;
+    }
+
+    try {
+      await toggleActive.mutateAsync({ id: workflowId, isActive: !isActive });
+      toast.success(isActive ? 'Workflow paused' : 'Workflow activated');
+    } catch (error) {
+      toast.error(
+        error instanceof Error ? error.message : 'Failed to update workflow status'
+      );
+    }
+  };
+
   return (
     <div className="flex h-14 items-center justify-between border-b bg-background px-4">
       {/* Left section */}
@@ -244,6 +264,23 @@ export function WorkflowToolbar({ workflowId, onTestExecutionStart }: WorkflowTo
         </div>
 
         <ThemeToggle />
+
+        <Button
+          variant={isActive ? 'default' : 'outline'}
+          size="sm"
+          onClick={handleToggleActive}
+          disabled={isToggling || !workflowId}
+          title={!workflowId ? 'Save workflow first' : isActive ? 'Pause workflow' : 'Activate workflow'}
+        >
+          {isToggling ? (
+            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+          ) : isActive ? (
+            <Pause className="mr-2 h-4 w-4" />
+          ) : (
+            <Power className="mr-2 h-4 w-4" />
+          )}
+          {isToggling ? 'Updating...' : isActive ? 'Active' : 'Inactive'}
+        </Button>
 
         <Button
           variant="outline"
