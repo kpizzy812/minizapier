@@ -2,7 +2,7 @@
 
 import { memo } from 'react';
 import { type NodeProps, Position } from '@xyflow/react';
-import { Globe, Mail, Send, Database, Code } from 'lucide-react';
+import { Globe, Mail, Send, Database, Code, Sparkles } from 'lucide-react';
 import { BaseNode, NodeExecutionStatus } from './base-node';
 import { Badge } from '@/components/ui/badge';
 
@@ -59,20 +59,22 @@ export type ActionNodeData =
   | DatabaseQueryData
   | TransformData;
 
-const actionIcons = {
+const actionIcons: Record<string, React.ReactNode> = {
   httpRequest: <Globe className="h-4 w-4" />,
   sendEmail: <Mail className="h-4 w-4" />,
   sendTelegram: <Send className="h-4 w-4" />,
   databaseQuery: <Database className="h-4 w-4" />,
   transform: <Code className="h-4 w-4" />,
+  aiRequest: <Sparkles className="h-4 w-4" />,
 };
 
-const actionLabels = {
+const actionLabels: Record<string, string> = {
   httpRequest: 'HTTP Request',
   sendEmail: 'Send Email',
   sendTelegram: 'Telegram',
   databaseQuery: 'Database',
   transform: 'Transform',
+  aiRequest: 'AI Request',
 };
 
 const methodColors: Record<string, string> = {
@@ -83,15 +85,16 @@ const methodColors: Record<string, string> = {
   DELETE: 'bg-red-500/20 text-red-700 dark:text-red-400',
 };
 
-function ActionNodeComponent({ data, selected }: NodeProps) {
+function ActionNodeComponent({ id, data, selected }: NodeProps) {
   const nodeData = data as unknown as ActionNodeData;
   const executionStatus = (data as unknown as { executionStatus?: NodeExecutionStatus }).executionStatus;
   const icon = actionIcons[nodeData.type];
 
   return (
     <BaseNode
+      nodeId={id}
       data={{
-        label: nodeData.label || actionLabels[nodeData.type],
+        label: nodeData.label || actionLabels[nodeData.type] || 'Action',
         description: nodeData.description,
         icon,
       }}

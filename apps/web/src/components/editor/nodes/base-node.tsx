@@ -34,6 +34,7 @@ interface BaseNodeProps {
   sourceHandles?: HandleConfig[];
   targetHandles?: HandleConfig[];
   executionStatus?: NodeExecutionStatus;
+  nodeId?: string;
 }
 
 const variantStyles = {
@@ -98,6 +99,7 @@ function BaseNodeComponent({
   sourceHandles = [{ id: 'source', position: Position.Bottom }],
   targetHandles = [{ id: 'target', position: Position.Top }],
   executionStatus,
+  nodeId,
 }: BaseNodeProps) {
   const styles = variantStyles[variant];
 
@@ -149,6 +151,14 @@ function BaseNodeComponent({
           </p>
         )}
         {children}
+        {/* Node ID */}
+        {nodeId && (
+          <div className="mt-2 pt-2 border-t border-border/50">
+            <p className="text-[10px] text-muted-foreground font-mono truncate" title={nodeId}>
+              ID: {nodeId}
+            </p>
+          </div>
+        )}
       </div>
 
       {/* Source Handles */}

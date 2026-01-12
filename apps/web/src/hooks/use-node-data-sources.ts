@@ -54,6 +54,16 @@ const triggerSampleData: Record<string, Record<string, unknown>> = {
   },
 };
 
+// Schema field type for AI output schema
+interface SchemaField {
+  name: string;
+  type: 'string' | 'number' | 'boolean' | 'array' | 'object';
+  description?: string;
+  required?: boolean;
+  items?: SchemaField;
+  properties?: SchemaField[];
+}
+
 // Sample data for action nodes
 const actionSampleData: Record<string, Record<string, unknown>> = {
   httpRequest: {
@@ -96,6 +106,62 @@ const actionSampleData: Record<string, Record<string, unknown>> = {
     usage: { promptTokens: 100, completionTokens: 50, totalTokens: 150 },
   },
 };
+
+/**
+ * Build sample data from output schema fields
+ */
+function buildSampleFromSchema(fields: SchemaField[]): Record<string, unknown> {
+  const result: Record<string, unknown> = {};
+
+  for (const field of fields) {
+    switch (field.type) {
+      case 'string':
+        result[field.name] = field.description || `Sample ${field.name}`;
+        break;
+      case 'number':
+        result[field.name] = 0;
+        break;
+      case 'boolean':
+        result[field.name] = true;
+        break;
+      case 'array':
+        if (field.items) {
+          result[field.name] = [buildSampleFromSchema([field.items])[field.items.name]];
+        } else {
+          result[field.name] = [];
+        }
+        break;
+      case 'object':
+        if (field.properties) {
+          result[field.name] = buildSampleFromSchema(field.properties);
+        } else {
+          result[field.name] = {};
+        }
+        break;
+    }
+  }
+
+  return result;
+}
+
+/**
+ * Get sample data for AI Request node - uses output schema if defined
+ */
+function getAIRequestSampleData(nodeData: Record<string, unknown>): Record<string, unknown> {
+  const outputSchema = nodeData.outputSchema as { fields?: SchemaField[] } | undefined;
+
+  // If output schema is defined, build sample from it
+  if (outputSchema?.fields && outputSchema.fields.length > 0) {
+    return {
+      content: buildSampleFromSchema(outputSchema.fields),
+      model: 'gpt-4o-mini',
+      usage: { promptTokens: 100, completionTokens: 50, totalTokens: 150 },
+    };
+  }
+
+  // Default sample data when no schema
+  return actionSampleData.aiRequest;
+}
 
 /**
  * Find all predecessor nodes for a given node ID
@@ -151,9 +217,16 @@ export function useNodeDataSources(nodeId: string | null): DataSource[] {
 
       // Determine sample data based on node type
       const isTrigger = ['webhookTrigger', 'scheduleTrigger', 'emailTrigger'].includes(nodeType);
-      const sampleData = isTrigger
-        ? triggerSampleData[nodeType] || {}
-        : actionSampleData[nodeType] || {};
+
+      let sampleData: Record<string, unknown>;
+      if (isTrigger) {
+        sampleData = triggerSampleData[nodeType] || {};
+      } else if (nodeType === 'aiRequest') {
+        // AI Request uses dynamic sample data based on output schema
+        sampleData = getAIRequestSampleData(nodeData);
+      } else {
+        sampleData = actionSampleData[nodeType] || {};
+      }
 
       sources.push({
         id: node.id,

@@ -12,12 +12,13 @@ export interface ConditionNodeData {
   expression: string;
 }
 
-function ConditionNodeComponent({ data, selected }: NodeProps) {
+function ConditionNodeComponent({ id, data, selected }: NodeProps) {
   const nodeData = data as unknown as ConditionNodeData;
   const executionStatus = (data as unknown as { executionStatus?: NodeExecutionStatus }).executionStatus;
 
   return (
     <BaseNode
+      nodeId={id}
       data={{
         label: nodeData.label || 'Condition',
         description: nodeData.description,

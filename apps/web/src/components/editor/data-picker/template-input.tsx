@@ -35,30 +35,48 @@ export function TemplateInput({
   const [isPickerOpen, setIsPickerOpen] = useState(false);
   const [cursorPosition, setCursorPosition] = useState<number | null>(null);
   const inputRef = useRef<HTMLInputElement | HTMLTextAreaElement>(null);
+  // Store cursor position in ref to avoid race conditions with focus loss
+  const cursorPositionRef = useRef<number | null>(null);
+
+  // Update cursor position in both state and ref
+  const updateCursorPosition = useCallback((position: number | null) => {
+    setCursorPosition(position);
+    cursorPositionRef.current = position;
+  }, []);
 
   // Track cursor position on input events
   const handleInputChange = useCallback(
     (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
       onChange(e.target.value);
-      setCursorPosition(e.target.selectionStart);
+      updateCursorPosition(e.target.selectionStart);
     },
-    [onChange]
+    [onChange, updateCursorPosition]
   );
 
   // Update cursor position on selection change
   const handleSelect = useCallback(
     (e: React.SyntheticEvent<HTMLInputElement | HTMLTextAreaElement>) => {
       const target = e.target as HTMLInputElement | HTMLTextAreaElement;
-      setCursorPosition(target.selectionStart);
+      updateCursorPosition(target.selectionStart);
     },
-    []
+    [updateCursorPosition]
+  );
+
+  // Also track on key up for arrow key navigation
+  const handleKeyUp = useCallback(
+    (e: React.KeyboardEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+      const target = e.target as HTMLInputElement | HTMLTextAreaElement;
+      updateCursorPosition(target.selectionStart);
+    },
+    [updateCursorPosition]
   );
 
   // Insert selected path at cursor position
   const handleDataSelect = useCallback(
     (path: string) => {
       const template = `{{${path}}}`;
-      const position = cursorPosition ?? value.length;
+      // Use ref for the most recent cursor position (avoids race conditions with focus loss)
+      const position = cursorPositionRef.current ?? cursorPosition ?? value.length;
 
       const newValue =
         value.slice(0, position) + template + value.slice(position);
@@ -67,7 +85,7 @@ export function TemplateInput({
 
       // Set cursor after inserted template
       const newCursorPosition = position + template.length;
-      setCursorPosition(newCursorPosition);
+      updateCursorPosition(newCursorPosition);
 
       // Focus input and set cursor position
       setTimeout(() => {
@@ -80,17 +98,24 @@ export function TemplateInput({
         }
       }, 0);
     },
-    [value, cursorPosition, onChange]
+    [value, cursorPosition, onChange, updateCursorPosition]
   );
 
-  // Open picker when clicking the button
-  const handlePickerButtonClick = useCallback(() => {
-    // Save current cursor position before opening
-    if (inputRef.current) {
-      setCursorPosition(inputRef.current.selectionStart);
-    }
-    setIsPickerOpen(true);
-  }, []);
+  // Handle mousedown on button - capture cursor position BEFORE focus is lost
+  const handlePickerButtonMouseDown = useCallback(
+    (e: React.MouseEvent) => {
+      // Prevent default to keep input focused (preserves cursor position)
+      e.preventDefault();
+
+      // Save current cursor position before opening
+      if (inputRef.current) {
+        const position = inputRef.current.selectionStart;
+        updateCursorPosition(position);
+      }
+      setIsPickerOpen(true);
+    },
+    [updateCursorPosition]
+  );
 
   const InputComponent = multiline ? Textarea : Input;
 
@@ -103,6 +128,7 @@ export function TemplateInput({
           onChange={handleInputChange}
           onSelect={handleSelect}
           onClick={handleSelect}
+          onKeyUp={handleKeyUp}
           placeholder={placeholder}
           className={cn('pr-10 font-mono text-sm', className)}
           {...(multiline ? { rows } : {})}
@@ -124,7 +150,7 @@ export function TemplateInput({
                 multiline ? 'top-1' : 'top-1/2 -translate-y-1/2',
                 'text-muted-foreground hover:text-foreground'
               )}
-              onClick={handlePickerButtonClick}
+              onMouseDown={handlePickerButtonMouseDown}
               title="Insert data from previous steps"
             >
               <Database className="h-4 w-4" />

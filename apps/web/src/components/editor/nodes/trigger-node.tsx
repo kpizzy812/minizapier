@@ -47,13 +47,14 @@ const triggerLabels = {
   emailTrigger: 'Email',
 };
 
-function TriggerNodeComponent({ data, selected }: NodeProps) {
+function TriggerNodeComponent({ id, data, selected }: NodeProps) {
   const nodeData = data as unknown as TriggerNodeData;
   const executionStatus = (data as unknown as { executionStatus?: NodeExecutionStatus }).executionStatus;
   const icon = triggerIcons[nodeData.type];
 
   return (
     <BaseNode
+      nodeId={id}
       data={{
         label: nodeData.label || triggerLabels[nodeData.type],
         description: nodeData.description,

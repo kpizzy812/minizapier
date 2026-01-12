@@ -9,6 +9,8 @@ import {
   AlertTriangle,
   ChevronDown,
   ChevronRight,
+  Copy,
+  Check,
 } from 'lucide-react';
 import { useState } from 'react';
 import {
@@ -19,6 +21,7 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useExecution, getStatusVariant } from '@/hooks/use-executions';
@@ -87,7 +90,7 @@ function StepItem({ step }: { step: StepLog }) {
           {step.error ? (
             <div>
               <div className="text-xs font-medium text-red-500 mb-1">Error</div>
-              <pre className="text-xs bg-red-50 dark:bg-red-950/30 p-2 rounded overflow-x-auto text-red-700 dark:text-red-300">
+              <pre className="text-xs bg-red-50 dark:bg-red-950/30 p-2 rounded text-red-700 dark:text-red-300 whitespace-pre-wrap break-all">
                 {step.error}
               </pre>
             </div>
@@ -98,9 +101,11 @@ function StepItem({ step }: { step: StepLog }) {
               <div className="text-xs font-medium text-muted-foreground mb-1">
                 Input
               </div>
-              <pre className="text-xs bg-background p-2 rounded border overflow-x-auto max-h-40">
-                {JSON.stringify(step.input, null, 2)}
-              </pre>
+              <ScrollArea className="max-h-40 rounded border">
+                <pre className="text-xs bg-background p-2 whitespace-pre-wrap break-all">
+                  {JSON.stringify(step.input, null, 2)}
+                </pre>
+              </ScrollArea>
             </div>
           ) : null}
 
@@ -109,9 +114,11 @@ function StepItem({ step }: { step: StepLog }) {
               <div className="text-xs font-medium text-muted-foreground mb-1">
                 Output
               </div>
-              <pre className="text-xs bg-background p-2 rounded border overflow-x-auto max-h-40">
-                {JSON.stringify(step.output, null, 2)}
-              </pre>
+              <ScrollArea className="max-h-40 rounded border">
+                <pre className="text-xs bg-background p-2 whitespace-pre-wrap break-all">
+                  {JSON.stringify(step.output, null, 2)}
+                </pre>
+              </ScrollArea>
             </div>
           ) : null}
 
@@ -126,6 +133,40 @@ function StepItem({ step }: { step: StepLog }) {
 
 export function ExecutionDetails({ executionId, onClose }: ExecutionDetailsProps) {
   const { data: execution, isLoading } = useExecution(executionId || undefined);
+  const [copied, setCopied] = useState(false);
+
+  const copyAllData = async () => {
+    if (!execution) return;
+
+    const data = {
+      id: execution.id,
+      workflowId: execution.workflowId,
+      status: execution.status,
+      startedAt: execution.startedAt,
+      finishedAt: execution.finishedAt,
+      error: execution.error,
+      input: execution.input,
+      output: execution.output,
+      steps: execution.steps?.map((step) => ({
+        nodeId: step.nodeId,
+        nodeName: step.nodeName,
+        status: step.status,
+        duration: step.duration,
+        input: step.input,
+        output: step.output,
+        error: step.error,
+        createdAt: step.createdAt,
+      })),
+    };
+
+    try {
+      await navigator.clipboard.writeText(JSON.stringify(data, null, 2));
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    } catch (err) {
+      console.error('Failed to copy:', err);
+    }
+  };
 
   const formatDuration = (startedAt: string, finishedAt?: string) => {
     if (!finishedAt) return 'Running...';
@@ -137,16 +178,38 @@ export function ExecutionDetails({ executionId, onClose }: ExecutionDetailsProps
 
   return (
     <Dialog open={!!executionId} onOpenChange={(open) => !open && onClose()}>
-      <DialogContent className="max-w-2xl max-h-[80vh]">
-        <DialogHeader>
-          <DialogTitle className="flex items-center gap-2">
-            Execution Details
+      <DialogContent className="max-w-4xl max-h-[85vh] overflow-hidden flex flex-col">
+        <DialogHeader className="shrink-0">
+          <div className="flex items-center justify-between gap-4">
+            <DialogTitle className="flex items-center gap-2">
+              Execution Details
+              {execution && (
+                <Badge variant={getStatusVariant(execution.status)}>
+                  {execution.status}
+                </Badge>
+              )}
+            </DialogTitle>
             {execution && (
-              <Badge variant={getStatusVariant(execution.status)}>
-                {execution.status}
-              </Badge>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={copyAllData}
+                className="gap-2 shrink-0"
+              >
+                {copied ? (
+                  <>
+                    <Check className="h-4 w-4" />
+                    Copied
+                  </>
+                ) : (
+                  <>
+                    <Copy className="h-4 w-4" />
+                    Copy All
+                  </>
+                )}
+              </Button>
             )}
-          </DialogTitle>
+          </div>
           <DialogDescription>
             View execution timeline, step logs, and input/output data
           </DialogDescription>
@@ -159,47 +222,49 @@ export function ExecutionDetails({ executionId, onClose }: ExecutionDetailsProps
             <Skeleton className="h-32 w-full" />
           </div>
         ) : execution ? (
-          <div className="space-y-4">
-            {/* Summary */}
-            <div className="grid grid-cols-2 gap-4 p-4 bg-muted/50 rounded-lg">
-              <div>
-                <div className="text-xs text-muted-foreground">Started</div>
-                <div className="font-medium">
-                  {format(new Date(execution.startedAt), 'MMM d, yyyy HH:mm:ss')}
-                </div>
-              </div>
-              <div>
-                <div className="text-xs text-muted-foreground">Duration</div>
-                <div className="font-medium">
-                  {formatDuration(execution.startedAt, execution.finishedAt)}
-                </div>
-              </div>
-              {execution.error && (
-                <div className="col-span-2">
-                  <div className="text-xs text-muted-foreground">Error</div>
-                  <div className="text-sm text-red-500 font-medium">
-                    {execution.error}
+          <ScrollArea className="flex-1 -mx-6 px-6">
+            <div className="space-y-4 pb-4">
+              {/* Summary */}
+              <div className="grid grid-cols-2 gap-4 p-4 bg-muted/50 rounded-lg">
+                <div>
+                  <div className="text-xs text-muted-foreground">Started</div>
+                  <div className="font-medium">
+                    {format(new Date(execution.startedAt), 'MMM d, yyyy HH:mm:ss')}
                   </div>
                 </div>
-              )}
-            </div>
+                <div>
+                  <div className="text-xs text-muted-foreground">Duration</div>
+                  <div className="font-medium">
+                    {formatDuration(execution.startedAt, execution.finishedAt)}
+                  </div>
+                </div>
+                {execution.error && (
+                  <div className="col-span-2">
+                    <div className="text-xs text-muted-foreground">Error</div>
+                    <div className="text-sm text-red-500 font-medium">
+                      {execution.error}
+                    </div>
+                  </div>
+                )}
+              </div>
 
-            {/* Input */}
-            {execution.input !== undefined && execution.input !== null ? (
+              {/* Input */}
+              {execution.input !== undefined && execution.input !== null ? (
+                <div>
+                  <div className="text-sm font-medium mb-2">Trigger Input</div>
+                  <ScrollArea className="max-h-48 rounded-lg border">
+                    <pre className="text-xs bg-muted p-3 whitespace-pre-wrap break-all">
+                      {JSON.stringify(execution.input, null, 2)}
+                    </pre>
+                  </ScrollArea>
+                </div>
+              ) : null}
+
+              {/* Steps */}
               <div>
-                <div className="text-sm font-medium mb-2">Trigger Input</div>
-                <pre className="text-xs bg-muted p-3 rounded-lg overflow-x-auto max-h-32">
-                  {JSON.stringify(execution.input, null, 2)}
-                </pre>
-              </div>
-            ) : null}
-
-            {/* Steps */}
-            <div>
-              <div className="text-sm font-medium mb-2">
-                Steps ({execution.steps?.length || 0})
-              </div>
-              <ScrollArea className="h-[300px] pr-4">
+                <div className="text-sm font-medium mb-2">
+                  Steps ({execution.steps?.length || 0})
+                </div>
                 <div className="space-y-2">
                   {execution.steps?.length > 0 ? (
                     execution.steps.map((step) => (
@@ -211,19 +276,21 @@ export function ExecutionDetails({ executionId, onClose }: ExecutionDetailsProps
                     </div>
                   )}
                 </div>
-              </ScrollArea>
-            </div>
-
-            {/* Output */}
-            {execution.output !== undefined && execution.output !== null ? (
-              <div>
-                <div className="text-sm font-medium mb-2">Final Output</div>
-                <pre className="text-xs bg-muted p-3 rounded-lg overflow-x-auto max-h-32">
-                  {JSON.stringify(execution.output, null, 2)}
-                </pre>
               </div>
-            ) : null}
-          </div>
+
+              {/* Output */}
+              {execution.output !== undefined && execution.output !== null ? (
+                <div>
+                  <div className="text-sm font-medium mb-2">Final Output</div>
+                  <ScrollArea className="max-h-48 rounded-lg border">
+                    <pre className="text-xs bg-muted p-3 whitespace-pre-wrap break-all">
+                      {JSON.stringify(execution.output, null, 2)}
+                    </pre>
+                  </ScrollArea>
+                </div>
+              ) : null}
+            </div>
+          </ScrollArea>
         ) : (
           <div className="text-center py-8 text-muted-foreground">
             Execution not found
