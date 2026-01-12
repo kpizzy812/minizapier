@@ -31,9 +31,9 @@ export function FieldWrapper({
         {hint && (
           <div className="group relative">
             <HelpCircle className="h-3.5 w-3.5 cursor-help text-muted-foreground" />
-            <div className="absolute bottom-full left-1/2 z-50 mb-2 hidden w-48 -translate-x-1/2 rounded-md bg-popover p-2 text-xs text-popover-foreground shadow-md group-hover:block">
+            <div className="absolute top-full left-1/2 z-50 mt-2 hidden w-48 -translate-x-1/2 rounded-md bg-popover p-2 text-xs text-popover-foreground shadow-md group-hover:block">
               {hint}
-              <div className="absolute left-1/2 top-full -translate-x-1/2 border-4 border-transparent border-t-popover" />
+              <div className="absolute left-1/2 bottom-full -translate-x-1/2 border-4 border-transparent border-b-popover" />
             </div>
           </div>
         )}
