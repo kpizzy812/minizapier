@@ -1,8 +1,8 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
-import { Save, Play, ArrowLeft, AlertTriangle, Loader2 } from 'lucide-react';
+import { Save, Play, ArrowLeft, AlertTriangle, Loader2, Undo2, Redo2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -19,7 +19,7 @@ interface WorkflowToolbarProps {
 
 export function WorkflowToolbar({ workflowId, onTestExecutionStart }: WorkflowToolbarProps) {
   const router = useRouter();
-  const { workflowName, setWorkflowName, setWorkflowId, nodes, edges } =
+  const { workflowName, setWorkflowName, setWorkflowId, nodes, edges, undo, redo, canUndo, canRedo } =
     useWorkflowStore();
   const [isEditing, setIsEditing] = useState(false);
   const [validation, setValidation] = useState<ValidationResult | null>(null);
@@ -30,6 +30,32 @@ export function WorkflowToolbar({ workflowId, onTestExecutionStart }: WorkflowTo
 
   const isSaving = createWorkflow.isPending || updateWorkflow.isPending;
   const isTesting = testWorkflow.isPending;
+
+  // Keyboard shortcuts for undo/redo
+  const handleKeyDown = useCallback((e: KeyboardEvent) => {
+    // Check if user is typing in an input field
+    if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) {
+      return;
+    }
+
+    if ((e.metaKey || e.ctrlKey) && e.key === 'z') {
+      e.preventDefault();
+      if (e.shiftKey) {
+        redo();
+      } else {
+        undo();
+      }
+    }
+    if ((e.metaKey || e.ctrlKey) && e.key === 'y') {
+      e.preventDefault();
+      redo();
+    }
+  }, [undo, redo]);
+
+  useEffect(() => {
+    document.addEventListener('keydown', handleKeyDown);
+    return () => document.removeEventListener('keydown', handleKeyDown);
+  }, [handleKeyDown]);
 
   const handleValidate = (): ValidationResult => {
     const result = validateWorkflow(
@@ -193,6 +219,30 @@ export function WorkflowToolbar({ workflowId, onTestExecutionStart }: WorkflowTo
 
       {/* Right section */}
       <div className="flex items-center gap-2">
+        {/* Undo/Redo buttons */}
+        <div className="flex items-center border-r pr-2 mr-1">
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={undo}
+            disabled={!canUndo()}
+            title="Undo (Ctrl+Z)"
+            className="h-8 w-8"
+          >
+            <Undo2 className="h-4 w-4" />
+          </Button>
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={redo}
+            disabled={!canRedo()}
+            title="Redo (Ctrl+Shift+Z)"
+            className="h-8 w-8"
+          >
+            <Redo2 className="h-4 w-4" />
+          </Button>
+        </div>
+
         <ThemeToggle />
 
         <Button
