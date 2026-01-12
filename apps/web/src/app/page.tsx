@@ -8,6 +8,7 @@ import { WorkflowList } from '@/components/workflows/workflow-list';
 import { ExecutionStats, ExecutionList } from '@/components/executions';
 import { CredentialList } from '@/components/credentials';
 import { UserMenu } from '@/components/auth/user-menu';
+import { ThemeToggle } from '@/components/ui/theme-toggle';
 
 export default function Home() {
   return (
@@ -26,6 +27,7 @@ export default function Home() {
                 New Workflow
               </Link>
             </Button>
+            <ThemeToggle />
             <UserMenu />
           </div>
         </div>

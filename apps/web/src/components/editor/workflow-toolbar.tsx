@@ -2,20 +2,22 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { Save, Play, ArrowLeft, AlertTriangle } from 'lucide-react';
+import { Save, Play, ArrowLeft, AlertTriangle, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
+import { ThemeToggle } from '@/components/ui/theme-toggle';
 import { useWorkflowStore } from '@/stores/workflow-store';
-import { useCreateWorkflow, useUpdateWorkflow } from '@/hooks/use-workflows';
+import { useCreateWorkflow, useUpdateWorkflow, useTestWorkflow } from '@/hooks/use-workflows';
 import { validateWorkflow, ValidationResult } from '@/lib/workflow-validator';
 
 interface WorkflowToolbarProps {
   workflowId?: string;
+  onTestExecutionStart?: (executionId: string) => void;
 }
 
-export function WorkflowToolbar({ workflowId }: WorkflowToolbarProps) {
+export function WorkflowToolbar({ workflowId, onTestExecutionStart }: WorkflowToolbarProps) {
   const router = useRouter();
   const { workflowName, setWorkflowName, setWorkflowId, nodes, edges } =
     useWorkflowStore();
@@ -24,8 +26,10 @@ export function WorkflowToolbar({ workflowId }: WorkflowToolbarProps) {
 
   const createWorkflow = useCreateWorkflow();
   const updateWorkflow = useUpdateWorkflow();
+  const testWorkflow = useTestWorkflow();
 
   const isSaving = createWorkflow.isPending || updateWorkflow.isPending;
+  const isTesting = testWorkflow.isPending;
 
   const handleValidate = (): ValidationResult => {
     const result = validateWorkflow(
@@ -111,8 +115,25 @@ export function WorkflowToolbar({ workflowId }: WorkflowToolbarProps) {
       return;
     }
 
-    // TODO: Implement test execution
-    toast.info('Test execution coming soon!');
+    // Workflow must be saved first
+    if (!workflowId) {
+      toast.error('Please save the workflow before testing');
+      return;
+    }
+
+    try {
+      const execution = await testWorkflow.mutateAsync({
+        id: workflowId,
+        testData: { test: true, timestamp: new Date().toISOString() },
+      });
+
+      toast.success('Test execution started');
+      onTestExecutionStart?.(execution.id);
+    } catch (error) {
+      toast.error(
+        error instanceof Error ? error.message : 'Failed to start test execution'
+      );
+    }
   };
 
   const handleBack = () => {
@@ -172,9 +193,21 @@ export function WorkflowToolbar({ workflowId }: WorkflowToolbarProps) {
 
       {/* Right section */}
       <div className="flex items-center gap-2">
-        <Button variant="outline" size="sm" onClick={handleTest}>
-          <Play className="mr-2 h-4 w-4" />
-          Test
+        <ThemeToggle />
+
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={handleTest}
+          disabled={isTesting || !workflowId}
+          title={!workflowId ? 'Save workflow first to test' : undefined}
+        >
+          {isTesting ? (
+            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+          ) : (
+            <Play className="mr-2 h-4 w-4" />
+          )}
+          {isTesting ? 'Starting...' : 'Test'}
         </Button>
 
         <Button size="sm" onClick={handleSave} disabled={isSaving}>

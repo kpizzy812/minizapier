@@ -4,7 +4,6 @@ import { ExecutionList } from '../execution-list';
 import {
   mockPaginatedExecutions,
   mockExecution,
-  mockFailedExecution,
   mockRunningExecution,
 } from '@/test/mocks/executions';
 

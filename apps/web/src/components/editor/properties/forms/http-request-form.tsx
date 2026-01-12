@@ -8,7 +8,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { FieldWrapper } from '../components';
+import { FieldWrapper, CredentialSelect } from '../components';
 import { Badge } from '@/components/ui/badge';
 import { TemplateInput } from '../../data-picker';
 import { useAvailableData } from '@/hooks/use-available-data';
@@ -33,6 +33,7 @@ export function HttpRequestForm({ data, onUpdate }: HttpRequestFormProps) {
   const sources = useAvailableData();
 
   const label = (data.label as string) || 'HTTP Request';
+  const credentialId = data.credentialId as string | undefined;
   const method = (data.method as string) || 'GET';
   const url = (data.url as string) || '';
   const headers = (data.headers as string) || '';
@@ -54,7 +55,7 @@ export function HttpRequestForm({ data, onUpdate }: HttpRequestFormProps) {
       {/* Method selection */}
       <FieldWrapper
         label="Method"
-        hint="GET = read data, POST = send data, PUT/PATCH = update, DELETE = remove"
+        hint="GET = read, POST = send, PUT/PATCH = update, DELETE = remove"
         required
       >
         <Select value={method} onValueChange={(v) => onUpdate({ method: v })}>
@@ -76,7 +77,7 @@ export function HttpRequestForm({ data, onUpdate }: HttpRequestFormProps) {
       {/* URL */}
       <FieldWrapper
         label="URL"
-        hint="The URL to send the request to. Click the database icon to insert data from previous steps."
+        hint="API endpoint address"
         required
       >
         <TemplateInput
@@ -87,15 +88,28 @@ export function HttpRequestForm({ data, onUpdate }: HttpRequestFormProps) {
         />
       </FieldWrapper>
 
+      {/* Authorization - optional */}
+      <FieldWrapper
+        label="Authorization (optional)"
+        hint="Select authentication method for protected APIs"
+      >
+        <CredentialSelect
+          value={credentialId}
+          onChange={(id) => onUpdate({ credentialId: id })}
+          credentialType={['HTTP_BEARER', 'HTTP_BASIC', 'HTTP_API_KEY']}
+          placeholder="No authorization"
+        />
+      </FieldWrapper>
+
       {/* Headers */}
       <FieldWrapper
         label="Headers (optional)"
-        hint="Extra headers to send. One per line: Name: value"
+        hint="Additional headers. Each on a new line: Name: value"
       >
         <TemplateInput
           value={headers}
           onChange={(v) => onUpdate({ headers: v })}
-          placeholder="Content-Type: application/json&#10;Authorization: Bearer {{trigger.body.token}}"
+          placeholder="Content-Type: application/json"
           sources={sources}
           multiline
           rows={3}
@@ -106,12 +120,12 @@ export function HttpRequestForm({ data, onUpdate }: HttpRequestFormProps) {
       {['POST', 'PUT', 'PATCH'].includes(method) && (
         <FieldWrapper
           label="Request Body"
-          hint="JSON body to send with the request. Click the database icon to insert data."
+          hint="Data to send in JSON format"
         >
           <TemplateInput
             value={body}
             onChange={(v) => onUpdate({ body: v })}
-            placeholder='{"key": "value", "userId": "{{trigger.body.id}}"}'
+            placeholder='{"key": "value"}'
             sources={sources}
             multiline
             rows={4}
@@ -121,39 +135,10 @@ export function HttpRequestForm({ data, onUpdate }: HttpRequestFormProps) {
 
       {/* Tips */}
       <div className="rounded-md border border-dashed p-3">
-        <h4 className="mb-2 text-sm font-medium">Using variables</h4>
-        <p className="text-xs text-muted-foreground mb-2">
-          Click the{' '}
-          <span className="inline-flex items-center bg-muted px-1.5 rounded">
-            <svg
-              className="h-3 w-3 mr-1"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M4 7v10c0 2.21 3.582 4 8 4s8-1.79 8-4V7M4 7c0 2.21 3.582 4 8 4s8-1.79 8-4M4 7c0-2.21 3.582-4 8-4s8 1.79 8 4"
-              />
-            </svg>
-            icon
-          </span>{' '}
-          to browse and insert data from previous steps.
+        <h4 className="mb-2 text-sm font-medium">Tip</h4>
+        <p className="text-xs text-muted-foreground">
+          Click the database icon next to a field to insert data from previous steps.
         </p>
-        <ul className="space-y-1 text-xs text-muted-foreground">
-          <li>
-            <code className="rounded bg-muted px-1">{'{{trigger.body}}'}</code> -
-            Data from trigger
-          </li>
-          <li>
-            <code className="rounded bg-muted px-1">
-              {'{{nodeId.output.field}}'}
-            </code>{' '}
-            - Data from previous step
-          </li>
-        </ul>
       </div>
     </div>
   );

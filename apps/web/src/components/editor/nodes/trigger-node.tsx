@@ -3,7 +3,7 @@
 import { memo } from 'react';
 import { type NodeProps, Position } from '@xyflow/react';
 import { Webhook, Clock, Mail } from 'lucide-react';
-import { BaseNode } from './base-node';
+import { BaseNode, NodeExecutionStatus } from './base-node';
 import { Badge } from '@/components/ui/badge';
 
 // Trigger node data types
@@ -49,6 +49,7 @@ const triggerLabels = {
 
 function TriggerNodeComponent({ data, selected }: NodeProps) {
   const nodeData = data as unknown as TriggerNodeData;
+  const executionStatus = (data as unknown as { executionStatus?: NodeExecutionStatus }).executionStatus;
   const icon = triggerIcons[nodeData.type];
 
   return (
@@ -60,6 +61,7 @@ function TriggerNodeComponent({ data, selected }: NodeProps) {
       }}
       selected={selected}
       variant="trigger"
+      executionStatus={executionStatus}
       targetHandles={[]} // Triggers have no inputs
       sourceHandles={[{ id: 'source', position: Position.Bottom }]}
     >

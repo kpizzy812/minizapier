@@ -63,11 +63,41 @@ do_sync() {
     log_success "Files synced!"
 }
 
+wait_for_container() {
+    local container=$1
+    local max_attempts=${2:-30}
+    local attempt=1
+
+    while [ $attempt -le $max_attempts ]; do
+        if ssh "$SERVER" "docker exec $container echo 'ready'" &>/dev/null; then
+            return 0
+        fi
+        log_info "Waiting for $container to be ready... ($attempt/$max_attempts)"
+        sleep 2
+        attempt=$((attempt + 1))
+    done
+    return 1
+}
+
 do_deploy() {
     log_info "Starting full deploy..."
     do_sync
     log_info "Building and restarting containers..."
     ssh "$SERVER" "cd $REMOTE_DIR && docker compose -f $COMPOSE_FILE up -d --build" 2>/dev/null
+
+    log_info "Waiting for API container to be ready..."
+    if wait_for_container "minizapier-api" 30; then
+        log_success "API container is ready!"
+        log_info "Applying database schema changes..."
+        if ssh "$SERVER" "docker exec minizapier-api npx prisma db push" 2>&1; then
+            log_success "Database schema updated!"
+        else
+            log_error "Schema update failed! Check API logs for details."
+        fi
+    else
+        log_error "API container failed to start in time. Run migrations manually: ./deploy.sh migrate"
+    fi
+
     log_success "Deploy complete!"
     echo ""
     do_status

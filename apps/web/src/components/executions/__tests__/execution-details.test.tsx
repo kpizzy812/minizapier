@@ -42,7 +42,7 @@ describe('ExecutionDetails', () => {
       refetch: vi.fn(),
     } as ReturnType<typeof useExecution>);
 
-    const { container } = render(
+    render(
       <ExecutionDetails executionId={null} onClose={mockOnClose} />
     );
 

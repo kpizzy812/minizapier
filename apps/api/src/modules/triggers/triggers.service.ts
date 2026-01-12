@@ -433,6 +433,114 @@ export class TriggersService {
   }
 
   /**
+   * Sync trigger from workflow definition.
+   * Automatically creates/updates trigger based on trigger node in definition.
+   * Called when workflow is saved.
+   */
+  async syncTriggerFromDefinition(
+    workflowId: string,
+    userId: string,
+    definition: {
+      nodes: Array<{
+        id: string;
+        type: string;
+        data?: Record<string, unknown>;
+      }>;
+    },
+  ): Promise<void> {
+    // Find trigger node in definition
+    const triggerNode = definition.nodes?.find((node) =>
+      ['webhookTrigger', 'emailTrigger', 'scheduleTrigger'].includes(node.type),
+    );
+
+    // Get existing trigger
+    const existingTrigger = await this.prisma.trigger.findFirst({
+      where: { workflowId },
+    });
+
+    // No trigger node in definition - remove existing trigger if any
+    if (!triggerNode) {
+      if (existingTrigger) {
+        if (existingTrigger.type === 'SCHEDULE') {
+          await this.scheduleTrigger.removeSchedule(existingTrigger.id);
+        }
+        await this.prisma.trigger.delete({ where: { id: existingTrigger.id } });
+        this.logger.log(
+          `Removed trigger for workflow ${workflowId} (no trigger node)`,
+        );
+      }
+      return;
+    }
+
+    // Map node type to trigger type
+    const typeMap: Record<string, TriggerType> = {
+      webhookTrigger: TriggerType.WEBHOOK,
+      emailTrigger: TriggerType.EMAIL,
+      scheduleTrigger: TriggerType.SCHEDULE,
+    };
+    const triggerType = typeMap[triggerNode.type];
+
+    if (!triggerType) {
+      return;
+    }
+
+    // If existing trigger has different type - delete it first
+    if (existingTrigger && existingTrigger.type !== triggerType) {
+      if (existingTrigger.type === 'SCHEDULE') {
+        await this.scheduleTrigger.removeSchedule(existingTrigger.id);
+      }
+      await this.prisma.trigger.delete({ where: { id: existingTrigger.id } });
+      this.logger.log(
+        `Deleted old ${existingTrigger.type} trigger for workflow ${workflowId}`,
+      );
+    }
+
+    // Create or update trigger
+    if (!existingTrigger || existingTrigger.type !== triggerType) {
+      // Build config from node data
+      const config = this.buildConfigFromNode(
+        triggerType,
+        triggerNode.data || {},
+      );
+
+      await this.create(userId, {
+        workflowId,
+        type: triggerType,
+        config,
+      });
+      this.logger.log(
+        `Created ${triggerType} trigger for workflow ${workflowId}`,
+      );
+    }
+  }
+
+  /**
+   * Build trigger config from node data.
+   */
+  private buildConfigFromNode(
+    type: TriggerType,
+    nodeData: Record<string, unknown>,
+  ): WebhookConfigDto | ScheduleConfigDto | EmailConfigDto {
+    switch (type) {
+      case TriggerType.WEBHOOK:
+        return {
+          secret: nodeData.secret as string | undefined,
+        };
+      case TriggerType.EMAIL:
+        return {
+          address: nodeData.address as string | undefined,
+        };
+      case TriggerType.SCHEDULE:
+        return {
+          cron: (nodeData.cron as string) || '0 0 9 * * *',
+          timezone: (nodeData.timezone as string) || 'UTC',
+        };
+      default:
+        return {};
+    }
+  }
+
+  /**
    * Prepare trigger data based on type.
    */
   private prepareTriggerData(

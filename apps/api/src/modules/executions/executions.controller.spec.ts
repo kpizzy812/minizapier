@@ -179,17 +179,6 @@ describe('ExecutionsController', () => {
         take: 5,
       });
     });
-
-    it('should use demo-user when userId not provided', async () => {
-      service.findAll.mockResolvedValue({
-        executions: [],
-        total: 0,
-      });
-
-      await controller.findAll('', {});
-
-      expect(service.findAll).toHaveBeenCalledWith('demo-user', {});
-    });
   });
 
   describe('getStats', () => {
@@ -208,14 +197,6 @@ describe('ExecutionsController', () => {
       await controller.getStats('user-123', 'wf-123');
 
       expect(service.getStats).toHaveBeenCalledWith('user-123', 'wf-123');
-    });
-
-    it('should use demo-user when userId not provided', async () => {
-      service.getStats.mockResolvedValue(mockStats);
-
-      await controller.getStats('');
-
-      expect(service.getStats).toHaveBeenCalledWith('demo-user', undefined);
     });
   });
 
@@ -237,14 +218,6 @@ describe('ExecutionsController', () => {
       await expect(controller.findOne('missing', 'user-123')).rejects.toThrow(
         NotFoundException,
       );
-    });
-
-    it('should use demo-user when userId not provided', async () => {
-      service.findOne.mockResolvedValue(mockExecutionWithSteps);
-
-      await controller.findOne('exec-123', '');
-
-      expect(service.findOne).toHaveBeenCalledWith('exec-123', 'demo-user');
     });
   });
 
@@ -293,14 +266,6 @@ describe('ExecutionsController', () => {
         NotFoundException,
       );
     });
-
-    it('should use demo-user when userId not provided', async () => {
-      service.replay.mockResolvedValue(mockExecution);
-
-      await controller.replay('exec-123', '');
-
-      expect(service.replay).toHaveBeenCalledWith('exec-123', 'demo-user');
-    });
   });
 
   describe('cancel', () => {
@@ -332,14 +297,6 @@ describe('ExecutionsController', () => {
       await expect(controller.cancel('exec-123', 'user-123')).rejects.toThrow(
         BadRequestException,
       );
-    });
-
-    it('should use demo-user when userId not provided', async () => {
-      service.cancel.mockResolvedValue(mockExecution);
-
-      await controller.cancel('exec-123', '');
-
-      expect(service.cancel).toHaveBeenCalledWith('exec-123', 'demo-user');
     });
   });
 });

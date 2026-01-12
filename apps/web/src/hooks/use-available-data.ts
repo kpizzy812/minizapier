@@ -13,6 +13,7 @@ const nodeTypeNames: Record<NodeType, string> = {
   databaseQuery: 'Database',
   transform: 'Transform',
   condition: 'Condition',
+  aiRequest: 'AI Request',
 };
 
 // Sample data structure for triggers (used when no test data available)
@@ -81,6 +82,11 @@ const actionSampleData: Partial<Record<NodeType, Record<string, unknown>>> = {
   condition: {
     result: true,
     matchedBranch: 'true',
+  },
+  aiRequest: {
+    content: 'AI generated response',
+    model: 'gpt-4o-mini',
+    usage: { promptTokens: 100, completionTokens: 50, totalTokens: 150 },
   },
 };
 

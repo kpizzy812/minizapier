@@ -1,4 +1,5 @@
 import { Injectable, Logger } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import { Resend, CreateEmailOptions } from 'resend';
 import { SendEmailConfig, SendEmailResult } from '../types';
 
@@ -8,6 +9,13 @@ import { SendEmailConfig, SendEmailResult } from '../types';
 @Injectable()
 export class SendEmailAction {
   private readonly logger = new Logger(SendEmailAction.name);
+  private readonly defaultFrom: string;
+
+  constructor(private readonly configService: ConfigService) {
+    this.defaultFrom =
+      this.configService.get<string>('NOTIFICATION_FROM_EMAIL') ||
+      'MiniZapier <noreply@syntratrade.xyz>';
+  }
 
   /**
    * Execute email sending
@@ -29,17 +37,20 @@ export class SendEmailAction {
       // Prepare recipients
       const recipients = Array.isArray(to) ? to : [to];
 
+      // Use configured from address or default from env
+      const fromAddress = from || this.defaultFrom;
+
       // Build email options - Resend requires either text or html (not both optional)
       const emailOptions: CreateEmailOptions = html
         ? {
-            from: from || 'MiniZapier <onboarding@resend.dev>',
+            from: fromAddress,
             to: recipients,
             subject,
             html: body,
             replyTo: replyTo,
           }
         : {
-            from: from || 'MiniZapier <onboarding@resend.dev>',
+            from: fromAddress,
             to: recipients,
             subject,
             text: body,

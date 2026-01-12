@@ -7,15 +7,18 @@ import {
   ValidateNested,
   IsArray,
   IsEmail,
+  IsNumber,
 } from 'class-validator';
 import { Type } from 'class-transformer';
 
 // Node position DTO
 class PositionDto {
   @ApiProperty({ example: 100 })
+  @IsNumber()
   x: number;
 
   @ApiProperty({ example: 200 })
+  @IsNumber()
   y: number;
 }
 

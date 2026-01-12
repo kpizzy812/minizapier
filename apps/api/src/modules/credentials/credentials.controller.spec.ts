@@ -57,14 +57,11 @@ describe('CredentialsController', () => {
     it('should create a credential', async () => {
       service.create.mockResolvedValue(mockCredentialResponse);
 
-      const result = await controller.create(
-        { 'x-user-id': 'user-123' },
-        {
-          name: 'Test Credential',
-          type: CredentialType.TELEGRAM,
-          data: { botToken: 'token' },
-        },
-      );
+      const result = await controller.create('user-123', {
+        name: 'Test Credential',
+        type: CredentialType.TELEGRAM,
+        data: { botToken: 'token' },
+      });
 
       expect(result).toEqual({
         data: mockCredentialResponse,
@@ -76,31 +73,13 @@ describe('CredentialsController', () => {
         data: { botToken: 'token' },
       });
     });
-
-    it('should use temp-user-id when x-user-id not provided', async () => {
-      service.create.mockResolvedValue(mockCredentialResponse);
-
-      await controller.create(
-        {},
-        {
-          name: 'Test',
-          type: CredentialType.TELEGRAM,
-          data: { botToken: 'token' },
-        },
-      );
-
-      expect(service.create).toHaveBeenCalledWith(
-        'temp-user-id',
-        expect.any(Object),
-      );
-    });
   });
 
   describe('findAll', () => {
     it('should return all credentials for user', async () => {
       service.findAll.mockResolvedValue([mockCredentialResponse]);
 
-      const result = await controller.findAll({ 'x-user-id': 'user-123' });
+      const result = await controller.findAll('user-123');
 
       expect(result).toEqual({ data: [mockCredentialResponse] });
       expect(service.findAll).toHaveBeenCalledWith('user-123');
@@ -109,7 +88,7 @@ describe('CredentialsController', () => {
     it('should return empty array when no credentials', async () => {
       service.findAll.mockResolvedValue([]);
 
-      const result = await controller.findAll({ 'x-user-id': 'user-123' });
+      const result = await controller.findAll('user-123');
 
       expect(result).toEqual({ data: [] });
     });
@@ -119,10 +98,7 @@ describe('CredentialsController', () => {
     it('should return a credential by id', async () => {
       service.findOne.mockResolvedValue(mockCredentialResponse);
 
-      const result = await controller.findOne(
-        { 'x-user-id': 'user-123' },
-        'cred-123',
-      );
+      const result = await controller.findOne('user-123', 'cred-123');
 
       expect(result).toEqual({ data: mockCredentialResponse });
       expect(service.findOne).toHaveBeenCalledWith('cred-123', 'user-123');
@@ -133,9 +109,9 @@ describe('CredentialsController', () => {
         new NotFoundException('Credential not found'),
       );
 
-      await expect(
-        controller.findOne({ 'x-user-id': 'user-123' }, 'missing'),
-      ).rejects.toThrow(NotFoundException);
+      await expect(controller.findOne('user-123', 'missing')).rejects.toThrow(
+        NotFoundException,
+      );
     });
   });
 
@@ -147,11 +123,9 @@ describe('CredentialsController', () => {
       };
       service.update.mockResolvedValue(updatedCredential);
 
-      const result = await controller.update(
-        { 'x-user-id': 'user-123' },
-        'cred-123',
-        { name: 'Updated Name' },
-      );
+      const result = await controller.update('user-123', 'cred-123', {
+        name: 'Updated Name',
+      });
 
       expect(result).toEqual({
         data: updatedCredential,
@@ -168,7 +142,7 @@ describe('CredentialsController', () => {
       );
 
       await expect(
-        controller.update({ 'x-user-id': 'user-123' }, 'missing', {
+        controller.update('user-123', 'missing', {
           name: 'New',
         }),
       ).rejects.toThrow(NotFoundException);
@@ -179,10 +153,7 @@ describe('CredentialsController', () => {
     it('should delete a credential', async () => {
       service.remove.mockResolvedValue(undefined);
 
-      const result = await controller.remove(
-        { 'x-user-id': 'user-123' },
-        'cred-123',
-      );
+      const result = await controller.remove('user-123', 'cred-123');
 
       expect(result).toEqual({ message: 'Credential deleted successfully' });
       expect(service.remove).toHaveBeenCalledWith('cred-123', 'user-123');
@@ -193,9 +164,9 @@ describe('CredentialsController', () => {
         new NotFoundException('Credential not found'),
       );
 
-      await expect(
-        controller.remove({ 'x-user-id': 'user-123' }, 'missing'),
-      ).rejects.toThrow(NotFoundException);
+      await expect(controller.remove('user-123', 'missing')).rejects.toThrow(
+        NotFoundException,
+      );
     });
   });
 
@@ -206,10 +177,7 @@ describe('CredentialsController', () => {
         message: 'Connected to Telegram bot: @test_bot',
       });
 
-      const result = await controller.test(
-        { 'x-user-id': 'user-123' },
-        'cred-123',
-      );
+      const result = await controller.test('user-123', 'cred-123');
 
       expect(result).toEqual({
         success: true,
@@ -227,10 +195,7 @@ describe('CredentialsController', () => {
         message: 'Invalid bot token',
       });
 
-      const result = await controller.test(
-        { 'x-user-id': 'user-123' },
-        'cred-123',
-      );
+      const result = await controller.test('user-123', 'cred-123');
 
       expect(result.success).toBe(false);
       expect(result.message).toContain('Invalid bot token');
@@ -241,9 +206,9 @@ describe('CredentialsController', () => {
         new NotFoundException('Credential not found'),
       );
 
-      await expect(
-        controller.test({ 'x-user-id': 'user-123' }, 'missing'),
-      ).rejects.toThrow(NotFoundException);
+      await expect(controller.test('user-123', 'missing')).rejects.toThrow(
+        NotFoundException,
+      );
     });
   });
 });

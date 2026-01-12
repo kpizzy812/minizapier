@@ -31,12 +31,12 @@ services:
     image: redis:7-alpine
     container_name: minizapier-redis
     restart: unless-stopped
-    command: redis-server --appendonly yes
+    command: redis-server --appendonly yes --requirepass ${REDIS_PASSWORD:-minizapier_redis_2025}
     volumes:
       - minizapier_redis_data:/data
     # Internal network only, no external port exposure needed
     healthcheck:
-      test: ["CMD", "redis-cli", "ping"]
+      test: ["CMD", "redis-cli", "-a", "${REDIS_PASSWORD:-minizapier_redis_2025}", "ping"]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -58,6 +58,7 @@ services:
       DATABASE_URL: postgresql://${POSTGRES_USER:-minizapier}:${POSTGRES_PASSWORD:-minizapier_secure_2025}@postgres:5432/${POSTGRES_DB:-minizapier}?schema=public
       REDIS_HOST: redis
       REDIS_PORT: 6379
+      REDIS_PASSWORD: ${REDIS_PASSWORD:-minizapier_redis_2025}
       # Supabase Auth
       SUPABASE_URL: ${SUPABASE_URL}
       SUPABASE_SERVICE_ROLE_KEY: ${SUPABASE_SERVICE_ROLE_KEY}

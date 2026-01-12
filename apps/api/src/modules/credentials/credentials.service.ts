@@ -14,6 +14,7 @@ import {
   HttpBearerCredentialData,
   HttpApiKeyCredentialData,
   DatabaseCredentialData,
+  AICredentialData,
 } from './dto/credentials.dto';
 import {
   Credential,
@@ -195,6 +196,9 @@ export class CredentialsService {
               'SMTP credentials saved. They will be tested when sending an email.',
           };
 
+        case CredentialType.AI:
+          return await this.testAI(credential.data as AICredentialData);
+
         default:
           return {
             success: true,
@@ -293,6 +297,48 @@ export class CredentialsService {
       await pool.end().catch(() => {});
       throw new Error(
         `Database error: ${error instanceof Error ? error.message : error}`,
+      );
+    }
+  }
+
+  /**
+   * Test AI API connection (OpenAI-compatible)
+   */
+  private async testAI(
+    data: AICredentialData,
+  ): Promise<{ success: boolean; message: string }> {
+    const baseUrl = data.baseUrl || 'https://api.openai.com/v1';
+    const model = data.model || 'gpt-4o-mini';
+
+    try {
+      // Simple models list request to verify API key
+      const response = await fetch(`${baseUrl}/models`, {
+        headers: {
+          Authorization: `Bearer ${data.apiKey}`,
+        },
+      });
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        let errorMessage = `API returned ${response.status}`;
+        try {
+          const errorJson = JSON.parse(errorText);
+          if (errorJson.error?.message) {
+            errorMessage = errorJson.error.message;
+          }
+        } catch {
+          // Use default error message
+        }
+        throw new Error(errorMessage);
+      }
+
+      return {
+        success: true,
+        message: `Connected to AI API (${baseUrl}). Model: ${model}`,
+      };
+    } catch (error) {
+      throw new Error(
+        `AI API error: ${error instanceof Error ? error.message : error}`,
       );
     }
   }

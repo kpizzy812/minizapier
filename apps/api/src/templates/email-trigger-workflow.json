@@ -1,0 +1,61 @@
+{
+  "id": "template-email-trigger",
+  "name": "Email Trigger Test",
+  "description": "Tests Email Trigger: Receive email -> Send Telegram notification with email content",
+  "category": "testing",
+  "requiredCredentials": ["telegram"],
+  "placeholders": {
+    "TELEGRAM_CHAT_ID": "Your Telegram chat ID (get from @userinfobot)",
+    "EMAIL_ADDRESS": "Generated email address for receiving (e.g., test@yourdomain.xyz)"
+  },
+  "definition": {
+    "nodes": [
+      {
+        "id": "trigger",
+        "type": "emailTrigger",
+        "position": { "x": 300, "y": 0 },
+        "data": {
+          "type": "emailTrigger",
+          "label": "Email Trigger",
+          "description": "Receives incoming emails"
+        }
+      },
+      {
+        "id": "telegram",
+        "type": "sendTelegram",
+        "position": { "x": 300, "y": 150 },
+        "data": {
+          "type": "sendTelegram",
+          "label": "Telegram Notification",
+          "description": "Send email content to Telegram",
+          "chatId": "{{TELEGRAM_CHAT_ID}}",
+          "message": "New Email Received!\n\nFrom: {{trigger.email.from}}\nSubject: {{trigger.email.subject}}\n\nBody:\n{{trigger.email.text}}",
+          "credentialId": "{{CREDENTIAL_TELEGRAM}}"
+        }
+      }
+    ],
+    "edges": [
+      { "id": "e1", "source": "trigger", "target": "telegram" }
+    ]
+  },
+  "triggerConfig": {
+    "type": "EMAIL",
+    "config": {
+      "address": "{{EMAIL_ADDRESS}}"
+    }
+  },
+  "testInstructions": {
+    "setup": [
+      "1. Create Telegram credential with your bot token",
+      "2. Set up inbound email domain in Resend (add MX record)",
+      "3. Replace TELEGRAM_CHAT_ID with your chat ID",
+      "4. Replace EMAIL_ADDRESS with your receiving address (e.g., test@yourdomain.xyz)"
+    ],
+    "test": [
+      "Send an email to the configured EMAIL_ADDRESS",
+      "",
+      "Expected result:",
+      "- Telegram message with email content (from, subject, body)"
+    ]
+  }
+}

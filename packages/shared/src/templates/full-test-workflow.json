@@ -1,0 +1,137 @@
+{
+  "id": "template-full-test",
+  "name": "Full Test - All Features",
+  "description": "Tests ALL actions in one workflow: Webhook -> Transform -> HTTP -> Condition -> Database -> Email -> Telegram",
+  "category": "testing",
+  "requiredCredentials": ["telegram", "resend", "database"],
+  "placeholders": {
+    "TELEGRAM_CHAT_ID": "Your Telegram chat ID (get from @userinfobot)",
+    "EMAIL_TO": "Email address to receive test results"
+  },
+  "definition": {
+    "nodes": [
+      {
+        "id": "trigger",
+        "type": "webhookTrigger",
+        "position": { "x": 300, "y": 0 },
+        "data": {
+          "type": "webhookTrigger",
+          "label": "1. Webhook Trigger",
+          "description": "Entry point - send POST request here"
+        }
+      },
+      {
+        "id": "transform",
+        "type": "transform",
+        "position": { "x": 300, "y": 120 },
+        "data": {
+          "type": "transform",
+          "label": "2. Transform",
+          "description": "Extract message from request body",
+          "expression": "$.trigger.body.message"
+        }
+      },
+      {
+        "id": "http",
+        "type": "httpRequest",
+        "position": { "x": 300, "y": 240 },
+        "data": {
+          "type": "httpRequest",
+          "label": "3. HTTP Request",
+          "description": "GET request to test API",
+          "method": "GET",
+          "url": "https://httpbin.org/json"
+        }
+      },
+      {
+        "id": "condition",
+        "type": "condition",
+        "position": { "x": 300, "y": 360 },
+        "data": {
+          "type": "condition",
+          "label": "4. IF/ELSE",
+          "description": "Check if HTTP status is 200",
+          "expression": "{{http.status}} === 200"
+        }
+      },
+      {
+        "id": "db_query",
+        "type": "databaseQuery",
+        "position": { "x": 100, "y": 480 },
+        "data": {
+          "type": "databaseQuery",
+          "label": "5a. Database Query",
+          "description": "Count workflows in database",
+          "query": "SELECT COUNT(*) as total FROM \"Workflow\"",
+          "credentialId": "{{CREDENTIAL_DATABASE}}"
+        }
+      },
+      {
+        "id": "email",
+        "type": "sendEmail",
+        "position": { "x": 100, "y": 600 },
+        "data": {
+          "type": "sendEmail",
+          "label": "6a. Send Email",
+          "description": "Send test results via email",
+          "to": "{{EMAIL_TO}}",
+          "subject": "MiniZapier Test - SUCCESS",
+          "body": "Workflow executed successfully!\n\nInput: {{transform}}\nHTTP status: {{http.status}}\nWorkflows in DB: {{db_query.rows.0.total}}",
+          "credentialId": "{{CREDENTIAL_RESEND}}"
+        }
+      },
+      {
+        "id": "telegram_success",
+        "type": "sendTelegram",
+        "position": { "x": 100, "y": 720 },
+        "data": {
+          "type": "sendTelegram",
+          "label": "7a. Telegram (Success)",
+          "description": "Final success notification",
+          "chatId": "{{TELEGRAM_CHAT_ID}}",
+          "message": "MiniZapier Full Test PASSED!\n\nInput: {{transform}}\nHTTP: {{http.status}}\nDB rows: {{db_query.rows.0.total}}\nEmail sent!",
+          "credentialId": "{{CREDENTIAL_TELEGRAM}}"
+        }
+      },
+      {
+        "id": "telegram_fail",
+        "type": "sendTelegram",
+        "position": { "x": 500, "y": 480 },
+        "data": {
+          "type": "sendTelegram",
+          "label": "5b. Telegram (Fail)",
+          "description": "Error notification",
+          "chatId": "{{TELEGRAM_CHAT_ID}}",
+          "message": "MiniZapier Test FAILED!\n\nHTTP status: {{http.status}}\nExpected: 200",
+          "credentialId": "{{CREDENTIAL_TELEGRAM}}"
+        }
+      }
+    ],
+    "edges": [
+      { "id": "e1", "source": "trigger", "target": "transform" },
+      { "id": "e2", "source": "transform", "target": "http" },
+      { "id": "e3", "source": "http", "target": "condition" },
+      { "id": "e4", "source": "condition", "target": "db_query", "sourceHandle": "true" },
+      { "id": "e5", "source": "condition", "target": "telegram_fail", "sourceHandle": "false" },
+      { "id": "e6", "source": "db_query", "target": "email" },
+      { "id": "e7", "source": "email", "target": "telegram_success" }
+    ]
+  },
+  "testInstructions": {
+    "setup": [
+      "1. Create Telegram credential with your bot token",
+      "2. Create Resend credential with API key",
+      "3. Create Database credential with PostgreSQL connection string",
+      "4. Replace TELEGRAM_CHAT_ID with your chat ID",
+      "5. Replace EMAIL_TO with your email address"
+    ],
+    "test": [
+      "Send POST request to the webhook URL:",
+      "curl -X POST <WEBHOOK_URL> -H 'Content-Type: application/json' -d '{\"message\":\"Hello Test!\"}'",
+      "",
+      "Expected results:",
+      "- Email received with test results",
+      "- Telegram message with success notification"
+    ]
+  }
+}

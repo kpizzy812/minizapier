@@ -19,7 +19,8 @@ export type NodeType =
   | 'sendTelegram'
   | 'databaseQuery'
   | 'transform'
-  | 'condition';
+  | 'condition'
+  | 'aiRequest';
 
 export interface WorkflowNode extends Node {
   type: NodeType;

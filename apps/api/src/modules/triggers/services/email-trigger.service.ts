@@ -355,48 +355,33 @@ export class EmailTriggerService {
 
   /**
    * Fetch full email content from Resend Receiving API
-   * Uses direct API call as SDK may not have this method
+   * Uses SDK method: resend.emails.receiving.get(email_id)
    */
   async fetchResendReceivedEmail(emailId: string): Promise<{
     text?: string;
     html?: string;
     headers?: Record<string, string>;
   } | null> {
-    const apiKey = this.configService.get<string>('RESEND_API_KEY');
-    if (!apiKey) {
-      this.logger.warn('RESEND_API_KEY not configured');
+    if (!this.resend) {
+      this.logger.warn('Resend client not configured');
       return null;
     }
 
     try {
-      const response = await fetch(
-        `https://api.resend.com/emails/${emailId}/content`,
-        {
-          method: 'GET',
-          headers: {
-            Authorization: `Bearer ${apiKey}`,
-            'Content-Type': 'application/json',
-          },
-        },
-      );
+      // Use Resend SDK to get received email content
+      const { data, error } = await this.resend.emails.receiving.get(emailId);
 
-      if (!response.ok) {
-        this.logger.error(
-          `Failed to fetch email content: ${response.status} ${response.statusText}`,
-        );
+      if (error) {
+        this.logger.error(`Failed to fetch email content: ${error.message}`);
         return null;
       }
 
-      const data = (await response.json()) as {
-        text?: string;
-        html?: string;
-        headers?: Record<string, string>;
-      };
+      this.logger.debug(`Fetched email content for ${emailId}`);
 
       return {
-        text: data.text,
-        html: data.html,
-        headers: data.headers,
+        text: data?.text ?? undefined,
+        html: data?.html ?? undefined,
+        headers: data?.headers as Record<string, string> | undefined,
       };
     } catch (error) {
       this.logger.error(`Error fetching received email ${emailId}:`, error);

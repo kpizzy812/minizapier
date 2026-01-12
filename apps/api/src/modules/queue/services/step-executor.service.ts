@@ -7,8 +7,30 @@ import {
   SendTelegramData,
   DatabaseQueryData,
   TransformData,
+  AIRequestData,
+  RetryConfig,
 } from '@minizapier/shared';
 import { ExecutionContext, StepResult } from '../types';
+
+/**
+ * Default retry configuration
+ */
+const DEFAULT_RETRY_CONFIG: Required<RetryConfig> = {
+  maxAttempts: 0, // No retry by default
+  initialDelayMs: 1000,
+  backoffMultiplier: 2,
+  maxDelayMs: 30000,
+};
+
+/**
+ * Extended step result with retry information
+ */
+export interface StepResultWithRetry extends StepResult {
+  /** Number of retry attempts made */
+  retryAttempts?: number;
+  /** Whether the step succeeded after retries */
+  retriedSuccessfully?: boolean;
+}
 import { TemplateResolverService } from './template-resolver.service';
 import { ConditionEvaluatorService } from './condition-evaluator.service';
 import {
@@ -17,12 +39,14 @@ import {
   SendEmailAction,
   SendTelegramAction,
   DatabaseQueryAction,
+  AIRequestAction,
 } from '../../actions/services';
 import { CredentialsService } from '../../credentials/credentials.service';
 import {
   TelegramCredentialData,
   ResendCredentialData,
   DatabaseCredentialData,
+  AICredentialData,
 } from '../../credentials/dto/credentials.dto';
 
 /**
@@ -41,6 +65,7 @@ export class StepExecutorService {
     private readonly sendEmailAction: SendEmailAction,
     private readonly sendTelegramAction: SendTelegramAction,
     private readonly databaseQueryAction: DatabaseQueryAction,
+    private readonly aiRequestAction: AIRequestAction,
     private readonly credentialsService: CredentialsService,
   ) {}
 
@@ -111,6 +136,10 @@ export class StepExecutorService {
           );
           break;
 
+        case 'aiRequest':
+          output = await this.executeAIRequest(resolvedData as AIRequestData);
+          break;
+
         default: {
           const unknownType = node.type as string;
           this.logger.warn(`Unknown node type: ${unknownType}`);
@@ -142,6 +171,80 @@ export class StepExecutorService {
         duration,
       };
     }
+  }
+
+  /**
+   * Execute a step with retry support.
+   * Uses exponential backoff for retries.
+   */
+  async executeStepWithRetry(
+    node: WorkflowNode,
+    context: ExecutionContext,
+  ): Promise<StepResultWithRetry> {
+    // Get retry config from node data or use defaults
+    const retryConfig = {
+      ...DEFAULT_RETRY_CONFIG,
+      ...node.data.retryConfig,
+    };
+
+    // If no retries configured, just execute normally
+    if (retryConfig.maxAttempts <= 0) {
+      return this.executeStep(node, context);
+    }
+
+    let lastResult: StepResult | null = null;
+    let attempt = 0;
+
+    while (attempt <= retryConfig.maxAttempts) {
+      // Execute step
+      const result = await this.executeStep(node, context);
+
+      // If successful, return immediately
+      if (result.success) {
+        return {
+          ...result,
+          retryAttempts: attempt,
+          retriedSuccessfully: attempt > 0,
+        };
+      }
+
+      lastResult = result;
+      attempt++;
+
+      // If we've exhausted all retries, break
+      if (attempt > retryConfig.maxAttempts) {
+        break;
+      }
+
+      // Calculate delay with exponential backoff
+      const delay = Math.min(
+        retryConfig.initialDelayMs *
+          Math.pow(retryConfig.backoffMultiplier, attempt - 1),
+        retryConfig.maxDelayMs,
+      );
+
+      this.logger.warn(
+        `Step ${node.id} failed (attempt ${attempt}/${retryConfig.maxAttempts}). ` +
+          `Retrying in ${delay}ms. Error: ${result.error}`,
+      );
+
+      // Wait before retry
+      await this.sleep(delay);
+    }
+
+    // All retries exhausted, return last result
+    return {
+      ...(lastResult as StepResult),
+      retryAttempts: retryConfig.maxAttempts,
+      retriedSuccessfully: false,
+    };
+  }
+
+  /**
+   * Sleep for specified milliseconds
+   */
+  private sleep(ms: number): Promise<void> {
+    return new Promise((resolve) => setTimeout(resolve, ms));
   }
 
   /**
@@ -185,9 +288,9 @@ export class StepExecutorService {
   }
 
   /**
-   * Detect if expression is JSONPath or JavaScript
+   * Detect if expression is JSONPath or safe expression
    */
-  private detectExpressionType(expression: string): 'jsonpath' | 'javascript' {
+  private detectExpressionType(expression: string): 'jsonpath' | 'expression' {
     const trimmed = expression.trim();
     // JSONPath typically starts with $ or contains specific patterns
     if (
@@ -198,7 +301,7 @@ export class StepExecutorService {
     ) {
       return 'jsonpath';
     }
-    return 'javascript';
+    return 'expression';
   }
 
   /**
@@ -330,6 +433,45 @@ export class StepExecutorService {
 
     if (!result.success) {
       throw new Error(result.error || 'Database query failed');
+    }
+
+    return result.data;
+  }
+
+  /**
+   * Execute AI Request action
+   */
+  private async executeAIRequest(data: AIRequestData): Promise<unknown> {
+    let apiKey: string | undefined;
+    let baseUrl: string | undefined;
+    let model: string | undefined;
+
+    if (data.credentialId) {
+      try {
+        const credentialData = (await this.credentialsService.getCredentialData(
+          data.credentialId,
+        )) as AICredentialData;
+        apiKey = credentialData.apiKey;
+        baseUrl = credentialData.baseUrl;
+        model = credentialData.model;
+      } catch (error) {
+        this.logger.warn(`Failed to get AI credential: ${error}`);
+      }
+    }
+
+    const result = await this.aiRequestAction.execute({
+      prompt: data.prompt,
+      systemPrompt: data.systemPrompt,
+      outputSchema: data.outputSchema,
+      temperature: data.temperature,
+      maxTokens: data.maxTokens,
+      apiKey,
+      baseUrl,
+      model,
+    });
+
+    if (!result.success) {
+      throw new Error(result.error || 'AI request failed');
     }
 
     return result.data;

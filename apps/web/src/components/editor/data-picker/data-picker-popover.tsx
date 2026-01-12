@@ -122,14 +122,14 @@ export function DataPickerPopover({
         {sources.length > 0 ? (
           <Tabs value={activeTab} onValueChange={setActiveTab}>
             {sources.length > 1 && (
-              <div className="border-b px-3 pt-2">
-                <TabsList className="h-8 w-full justify-start bg-transparent p-0">
+              <div className="border-b px-3 pt-2 overflow-x-auto">
+                <TabsList className="h-8 w-max min-w-full justify-start bg-transparent p-0 gap-1">
                   {sources.map((source) => (
                     <TabsTrigger
                       key={source.id}
                       value={source.id}
                       className={cn(
-                        'h-8 px-3 text-xs rounded-b-none border-b-2 border-transparent',
+                        'h-8 px-3 text-xs rounded-b-none border-b-2 border-transparent shrink-0',
                         'data-[state=active]:border-primary data-[state=active]:bg-transparent',
                         'data-[state=active]:shadow-none'
                       )}
@@ -168,10 +168,10 @@ export function DataPickerPopover({
           <div className="p-6 text-center">
             <Database className="h-10 w-10 mx-auto mb-2 text-muted-foreground/50" />
             <p className="text-sm text-muted-foreground">
-              No data available yet
+              No data available
             </p>
             <p className="text-xs text-muted-foreground mt-1">
-              Run a test to collect sample data
+              Connect a trigger to this action first
             </p>
           </div>
         )}
@@ -186,9 +186,7 @@ export function DataPickerPopover({
         {/* Footer with hint */}
         <div className="border-t px-3 py-2 bg-muted/30">
           <p className="text-xs text-muted-foreground">
-            Click &quot;Insert&quot; to add{' '}
-            <code className="bg-muted px-1 rounded">{'{{path.to.field}}'}</code>{' '}
-            at cursor position
+            Click on a field to insert its value
           </p>
         </div>
       </PopoverContent>

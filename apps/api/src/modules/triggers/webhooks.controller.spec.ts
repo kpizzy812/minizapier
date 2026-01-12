@@ -92,7 +92,12 @@ describe('WebhooksController', () => {
       parseSendGridPayload: jest.fn(),
       parseMailgunPayload: jest.fn(),
       parseGenericPayload: jest.fn(),
+      parseResendPayload: jest.fn(),
       buildEmailTriggerData: jest.fn(),
+      isResendPayload: jest.fn().mockReturnValue(false),
+      isSendGridPayload: jest.fn().mockReturnValue(false),
+      isMailgunPayload: jest.fn().mockReturnValue(false),
+      verifyResendSignature: jest.fn().mockReturnValue(true),
     };
 
     const mockExecutionsService = {

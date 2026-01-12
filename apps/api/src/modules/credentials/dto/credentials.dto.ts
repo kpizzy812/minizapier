@@ -18,6 +18,7 @@ export enum CredentialType {
   HTTP_API_KEY = 'HTTP_API_KEY',
   DATABASE = 'DATABASE',
   RESEND = 'RESEND',
+  AI = 'AI', // OpenAI-compatible API (DeepSeek, OpenAI, etc.)
 }
 
 /**
@@ -57,6 +58,12 @@ export interface ResendCredentialData {
   apiKey: string;
 }
 
+export interface AICredentialData {
+  apiKey: string;
+  baseUrl?: string; // Default: https://api.openai.com/v1
+  model?: string; // Default: gpt-4o-mini
+}
+
 export type CredentialData =
   | TelegramCredentialData
   | SmtpCredentialData
@@ -64,7 +71,8 @@ export type CredentialData =
   | HttpBearerCredentialData
   | HttpApiKeyCredentialData
   | DatabaseCredentialData
-  | ResendCredentialData;
+  | ResendCredentialData
+  | AICredentialData;
 
 /**
  * DTO for creating a new credential

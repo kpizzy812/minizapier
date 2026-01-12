@@ -10,6 +10,7 @@ import {
   Database,
   Code,
   GitBranch,
+  Sparkles,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useDnD } from './dnd-context';
@@ -80,6 +81,13 @@ const nodeDefinitions: NodeDefinition[] = [
     label: 'Transform',
     description: 'Transform data',
     icon: <Code className="h-5 w-5" />,
+    category: 'action',
+  },
+  {
+    type: 'aiRequest',
+    label: 'AI Request',
+    description: 'Call AI/LLM model',
+    icon: <Sparkles className="h-5 w-5" />,
     category: 'action',
   },
   // Logic

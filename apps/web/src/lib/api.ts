@@ -121,7 +121,8 @@ export type CredentialType =
   | 'HTTP_BEARER'
   | 'HTTP_API_KEY'
   | 'DATABASE'
-  | 'RESEND';
+  | 'RESEND'
+  | 'AI';
 
 export interface Credential {
   id: string;
@@ -165,6 +166,12 @@ export interface ResendCredentialData {
   apiKey: string;
 }
 
+export interface AICredentialData {
+  apiKey: string;
+  baseUrl?: string; // Default: https://api.openai.com/v1
+  model?: string; // Default: gpt-4o-mini
+}
+
 export type CredentialData =
   | TelegramCredentialData
   | SmtpCredentialData
@@ -172,7 +179,8 @@ export type CredentialData =
   | HttpBearerCredentialData
   | HttpApiKeyCredentialData
   | DatabaseCredentialData
-  | ResendCredentialData;
+  | ResendCredentialData
+  | AICredentialData;
 
 export interface CreateCredentialInput {
   name: string;
@@ -391,6 +399,88 @@ class ApiClient {
   async testCredential(id: string): Promise<CredentialTestResult> {
     return this.request<CredentialTestResult>(`/credentials/${id}/test`, {
       method: 'POST',
+    });
+  }
+
+  // AI API
+  async testAIStream(
+    credentialId: string,
+    prompt: string,
+    systemPrompt?: string,
+    onChunk?: (chunk: string) => void,
+    onError?: (error: string) => void,
+    onDone?: () => void
+  ): Promise<void> {
+    const authHeaders = await this.getAuthHeaders();
+
+    const response = await fetch(`${this.baseUrl}/ai/test/stream`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        ...authHeaders,
+      },
+      body: JSON.stringify({
+        credentialId,
+        prompt,
+        systemPrompt,
+      }),
+    });
+
+    if (!response.ok) {
+      const error = await response.json().catch(() => ({}));
+      throw new Error(error.message || `HTTP error! status: ${response.status}`);
+    }
+
+    const reader = response.body?.getReader();
+    if (!reader) {
+      throw new Error('No response body');
+    }
+
+    const decoder = new TextDecoder();
+
+    try {
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+
+        const chunk = decoder.decode(value, { stream: true });
+        const lines = chunk.split('\n').filter((line) => line.trim() !== '');
+
+        for (const line of lines) {
+          if (line.startsWith('data: ')) {
+            const data = line.slice(6);
+            try {
+              const parsed = JSON.parse(data);
+              if (parsed.type === 'chunk' && parsed.content && onChunk) {
+                onChunk(parsed.content);
+              } else if (parsed.type === 'error' && onError) {
+                onError(parsed.error);
+              } else if (parsed.type === 'done' && onDone) {
+                onDone();
+              }
+            } catch {
+              // Skip invalid JSON
+            }
+          }
+        }
+      }
+    } finally {
+      reader.releaseLock();
+    }
+  }
+
+  async testAI(
+    credentialId: string,
+    prompt: string,
+    systemPrompt?: string
+  ): Promise<{ success: boolean; data?: unknown; error?: string }> {
+    return this.request<{ success: boolean; data?: unknown; error?: string }>('/ai/test', {
+      method: 'POST',
+      body: JSON.stringify({
+        credentialId,
+        prompt,
+        systemPrompt,
+      }),
     });
   }
 }

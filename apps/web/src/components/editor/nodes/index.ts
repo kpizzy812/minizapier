@@ -33,6 +33,7 @@ export const nodeTypes = {
   sendTelegram: ActionNode,
   databaseQuery: ActionNode,
   transform: ActionNode,
+  aiRequest: ActionNode,
   // Logic
   condition: ConditionNode,
 };

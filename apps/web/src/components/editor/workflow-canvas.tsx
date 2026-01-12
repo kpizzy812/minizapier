@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useRef, useEffect, type DragEvent } from 'react';
+import { useCallback, useRef, useEffect, useMemo, type DragEvent } from 'react';
 import {
   ReactFlow,
   Controls,
@@ -13,8 +13,21 @@ import {
 import '@xyflow/react/dist/style.css';
 
 import { useWorkflowStore } from '@/stores/workflow-store';
+import { useExecutionStatusStore } from '@/hooks/use-execution-socket';
 import { nodeTypes, type NodeTypeKey } from './nodes';
 import { useDnD } from './sidebar';
+
+// Generate random string for email trigger address
+const generateEmailAddress = () => {
+  const chars = 'abcdefghijklmnopqrstuvwxyz0123456789';
+  let result = 'trigger-';
+  for (let i = 0; i < 12; i++) {
+    result += chars.charAt(Math.floor(Math.random() * chars.length));
+  }
+  // Domain from env or default
+  const domain = process.env.NEXT_PUBLIC_INBOUND_EMAIL_DOMAIN || 'syntratrade.xyz';
+  return `${result}@${domain}`;
+};
 
 // Default data for each node type
 const defaultNodeData: Record<NodeTypeKey, Record<string, unknown>> = {
@@ -74,6 +87,15 @@ const defaultNodeData: Record<NodeTypeKey, Record<string, unknown>> = {
     description: 'If/Else branching',
     expression: '',
   },
+  aiRequest: {
+    type: 'aiRequest',
+    label: 'AI Request',
+    description: 'Call AI model',
+    prompt: '',
+    systemPrompt: '',
+    temperature: 0.7,
+    maxTokens: 1000,
+  },
 };
 
 let nodeId = 0;
@@ -95,6 +117,20 @@ export function WorkflowCanvas() {
     selectNode,
     deleteNode,
   } = useWorkflowStore();
+
+  // Get node execution statuses for highlighting
+  const nodeStatuses = useExecutionStatusStore((state) => state.nodeStatuses);
+
+  // Merge execution status into node data for rendering
+  const nodesWithStatus = useMemo(() => {
+    return nodes.map((node) => ({
+      ...node,
+      data: {
+        ...node.data,
+        executionStatus: nodeStatuses[node.id],
+      },
+    }));
+  }, [nodes, nodeStatuses]);
 
   // Handle keyboard shortcuts for node deletion
   useEffect(() => {
@@ -147,11 +183,17 @@ export function WorkflowCanvas() {
         y: event.clientY,
       });
 
+      // Build node data with special handling for emailTrigger
+      let nodeData = { ...defaultNodeData[nodeType] };
+      if (nodeType === 'emailTrigger') {
+        nodeData = { ...nodeData, address: generateEmailAddress() };
+      }
+
       const newNode = {
         id: getId(),
         type: nodeType,
         position,
-        data: { ...defaultNodeData[nodeType] },
+        data: nodeData,
       };
 
       addNode(newNode);
@@ -173,7 +215,7 @@ export function WorkflowCanvas() {
   return (
     <div ref={reactFlowWrapper} className="h-full w-full">
       <ReactFlow
-        nodes={nodes}
+        nodes={nodesWithStatus}
         edges={edges}
         onNodesChange={onNodesChange}
         onEdgesChange={onEdgesChange}

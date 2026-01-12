@@ -1,8 +1,7 @@
 'use client';
 
 import { Input } from '@/components/ui/input';
-import { FieldWrapper } from '../components';
-import { AlertTriangle } from 'lucide-react';
+import { FieldWrapper, CredentialSelect } from '../components';
 import { TemplateInput } from '../../data-picker';
 import { useAvailableData } from '@/hooks/use-available-data';
 
@@ -15,6 +14,7 @@ export function DatabaseQueryForm({ data, onUpdate }: DatabaseQueryFormProps) {
   const sources = useAvailableData();
 
   const label = (data.label as string) || 'Database Query';
+  const credentialId = data.credentialId as string | undefined;
   const query = (data.query as string) || '';
   const params = (data.params as string) || '';
 
@@ -29,16 +29,29 @@ export function DatabaseQueryForm({ data, onUpdate }: DatabaseQueryFormProps) {
         />
       </FieldWrapper>
 
+      {/* Database Credential */}
+      <FieldWrapper
+        label="Database"
+        hint="Select database connection"
+        required
+      >
+        <CredentialSelect
+          value={credentialId}
+          onChange={(id) => onUpdate({ credentialId: id })}
+          credentialType="DATABASE"
+        />
+      </FieldWrapper>
+
       {/* SQL Query */}
       <FieldWrapper
         label="SQL Query"
-        hint="SQL query to execute. Use $1, $2, etc. for parameters."
+        hint="SQL query. Use $1, $2, etc. for parameters"
         required
       >
         <TemplateInput
           value={query}
           onChange={(v) => onUpdate({ query: v })}
-          placeholder="SELECT * FROM users WHERE email = $1 AND status = $2"
+          placeholder="SELECT * FROM users WHERE email = $1"
           sources={sources}
           multiline
           rows={5}
@@ -48,29 +61,17 @@ export function DatabaseQueryForm({ data, onUpdate }: DatabaseQueryFormProps) {
       {/* Query parameters */}
       <FieldWrapper
         label="Parameters (optional)"
-        hint="Values for $1, $2, etc. One per line or comma-separated. Click database icon to insert data."
+        hint="Values for $1, $2, etc. Each on a new line"
       >
         <TemplateInput
           value={params}
           onChange={(v) => onUpdate({ params: v })}
-          placeholder="{{trigger.body.email}}&#10;active"
+          placeholder="value1&#10;value2"
           sources={sources}
           multiline
           rows={3}
         />
       </FieldWrapper>
-
-      {/* Security warning */}
-      <div className="flex items-start gap-2 rounded-md bg-amber-500/10 p-3 text-amber-700 dark:text-amber-400">
-        <AlertTriangle className="mt-0.5 h-4 w-4 flex-shrink-0" />
-        <div className="text-xs">
-          <p className="font-medium">Security notice</p>
-          <p className="mt-1">
-            Always use parameterized queries ($1, $2, etc.) instead of string
-            concatenation to prevent SQL injection attacks.
-          </p>
-        </div>
-      </div>
 
       {/* Tips */}
       <div className="rounded-md border border-dashed p-3">

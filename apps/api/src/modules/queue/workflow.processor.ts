@@ -9,6 +9,7 @@ import { WorkflowJobData, ExecutionContext } from './types';
 import { GraphTraverserService } from './services/graph-traverser.service';
 import { StepExecutorService } from './services/step-executor.service';
 import { NotificationsService } from '../notifications';
+import { ExecutionEventsService } from '../executions/execution-events.service';
 
 /**
  * Scheduled job data from trigger scheduler
@@ -39,6 +40,8 @@ export class WorkflowProcessor extends WorkerHost {
     private readonly stepExecutor: StepExecutorService,
     @Inject(NotificationsService)
     private readonly notifications: NotificationsService,
+    @Inject(ExecutionEventsService)
+    private readonly executionEvents: ExecutionEventsService,
   ) {
     super();
   }
@@ -154,7 +157,9 @@ export class WorkflowProcessor extends WorkerHost {
     definition: WorkflowDefinition,
     triggerData: unknown,
     job?: Job<WorkflowJobData>,
+    workflowName?: string,
   ): Promise<unknown> {
+    const startedAt = new Date();
     this.logger.log(
       `Starting workflow execution: ${executionId} for workflow: ${workflowId}`,
     );
@@ -162,6 +167,13 @@ export class WorkflowProcessor extends WorkerHost {
     try {
       // Update execution status to RUNNING
       await this.updateExecutionStatus(executionId, 'RUNNING');
+
+      // Emit execution start event
+      this.executionEvents.emitExecutionStart({
+        executionId,
+        workflowId,
+        workflowName: workflowName || 'Workflow',
+      });
 
       // Initialize execution context with trigger data
       const context: ExecutionContext = {
@@ -193,6 +205,14 @@ export class WorkflowProcessor extends WorkerHost {
             output: null,
             duration: 0,
           });
+          // Emit step skipped event
+          this.executionEvents.emitStepComplete({
+            executionId,
+            nodeId: node.id,
+            nodeName: node.data.label || node.type,
+            status: 'skipped',
+            duration: 0,
+          });
           continue;
         }
 
@@ -203,24 +223,62 @@ export class WorkflowProcessor extends WorkerHost {
             : context[orderItem.dependsOn[0]] || context,
         });
 
-        // Execute the step
-        const result = await this.stepExecutor.executeStep(node, context);
+        // Emit step start event
+        this.executionEvents.emitStepStart({
+          executionId,
+          nodeId: node.id,
+          nodeName: node.data.label || node.type,
+        });
+
+        // Execute the step with retry support
+        const result = await this.stepExecutor.executeStepWithRetry(
+          node,
+          context,
+        );
 
         // Store output in context
         context[node.id] = result.output;
         lastOutput = result.output;
 
-        // Update step log with result
+        // Update step log with result (include retry info)
         await this.updateStepLog(executionId, node.id, {
           status: result.success ? 'success' : 'error',
           output: result.output,
           error: result.error,
           duration: result.duration,
+          retryAttempts: result.retryAttempts,
         });
 
-        // If step failed, stop execution (unless retry logic is implemented)
+        // Emit step complete event
+        this.executionEvents.emitStepComplete({
+          executionId,
+          nodeId: node.id,
+          nodeName: node.data.label || node.type,
+          status: result.success ? 'success' : 'error',
+          output: result.output,
+          error: result.error,
+          duration: result.duration,
+          retryAttempts: result.retryAttempts,
+        });
+
+        // Log if step succeeded after retries
+        if (result.retriedSuccessfully) {
+          this.logger.log(
+            `Step ${node.id} succeeded after ${result.retryAttempts} retries`,
+          );
+        }
+
+        // If step failed after all retries, stop execution
         if (!result.success) {
           await this.updateExecutionStatus(executionId, 'FAILED', result.error);
+          // Emit execution complete (failed)
+          this.executionEvents.emitExecutionComplete({
+            executionId,
+            workflowId,
+            status: 'FAILED',
+            error: result.error,
+            startedAt,
+          });
           return {
             success: false,
             error: result.error,
@@ -257,6 +315,15 @@ export class WorkflowProcessor extends WorkerHost {
         lastOutput,
       );
 
+      // Emit execution complete (success)
+      this.executionEvents.emitExecutionComplete({
+        executionId,
+        workflowId,
+        status: 'SUCCESS',
+        output: lastOutput,
+        startedAt,
+      });
+
       this.logger.log(`Workflow execution completed: ${executionId}`);
 
       return {
@@ -274,6 +341,15 @@ export class WorkflowProcessor extends WorkerHost {
       );
 
       await this.updateExecutionStatus(executionId, 'FAILED', errorMessage);
+
+      // Emit execution complete (failed)
+      this.executionEvents.emitExecutionComplete({
+        executionId,
+        workflowId,
+        status: 'FAILED',
+        error: errorMessage,
+        startedAt,
+      });
 
       throw error;
     }
@@ -403,6 +479,7 @@ export class WorkflowProcessor extends WorkerHost {
       output?: unknown;
       error?: string;
       duration?: number;
+      retryAttempts?: number;
     },
   ): Promise<void> {
     // Find the most recent step log for this node
@@ -424,6 +501,7 @@ export class WorkflowProcessor extends WorkerHost {
           output: data.output as object | undefined,
           error: data.error,
           duration: data.duration,
+          retryAttempts: data.retryAttempts,
         },
       });
     }

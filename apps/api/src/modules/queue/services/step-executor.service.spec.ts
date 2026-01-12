@@ -416,4 +416,189 @@ describe('StepExecutorService', () => {
       expect(service.isConditionNode(node)).toBe(false);
     });
   });
+
+  describe('executeStepWithRetry', () => {
+    it('should execute without retry when maxAttempts is 0', async () => {
+      const node: WorkflowNode = {
+        id: 'trigger-1',
+        type: 'webhookTrigger',
+        position: { x: 0, y: 0 },
+        data: { label: 'Webhook' },
+      };
+      const context: ExecutionContext = {
+        trigger: { method: 'POST' },
+      };
+
+      const result = await service.executeStepWithRetry(node, context);
+
+      expect(result.success).toBe(true);
+      expect(result.retryAttempts).toBeUndefined();
+      expect(result.retriedSuccessfully).toBeUndefined();
+    });
+
+    it('should succeed on first attempt without retries', async () => {
+      const node: WorkflowNode = {
+        id: 'http-1',
+        type: 'httpRequest',
+        position: { x: 0, y: 0 },
+        data: {
+          label: 'HTTP Request',
+          url: 'https://api.example.com',
+          method: 'GET',
+          retryConfig: { maxAttempts: 3 },
+        },
+      };
+      const context: ExecutionContext = { trigger: {} };
+
+      const result = await service.executeStepWithRetry(node, context);
+
+      expect(result.success).toBe(true);
+      expect(result.retryAttempts).toBe(0);
+      expect(result.retriedSuccessfully).toBe(false);
+    });
+
+    it('should retry on failure and succeed after retries', async () => {
+      let callCount = 0;
+      httpRequestAction.execute.mockImplementation(() => {
+        callCount++;
+        if (callCount < 3) {
+          return Promise.resolve({
+            success: false,
+            error: 'Connection timeout',
+          });
+        }
+        return Promise.resolve({
+          success: true,
+          data: { status: 200 },
+        });
+      });
+
+      const node: WorkflowNode = {
+        id: 'http-1',
+        type: 'httpRequest',
+        position: { x: 0, y: 0 },
+        data: {
+          label: 'HTTP Request',
+          url: 'https://api.example.com',
+          method: 'GET',
+          retryConfig: {
+            maxAttempts: 3,
+            initialDelayMs: 10, // Short delay for tests
+            backoffMultiplier: 1,
+          },
+        },
+      };
+      const context: ExecutionContext = { trigger: {} };
+
+      const result = await service.executeStepWithRetry(node, context);
+
+      expect(result.success).toBe(true);
+      expect(result.retryAttempts).toBe(2);
+      expect(result.retriedSuccessfully).toBe(true);
+      expect(callCount).toBe(3);
+    });
+
+    it('should fail after exhausting all retry attempts', async () => {
+      httpRequestAction.execute.mockResolvedValue({
+        success: false,
+        error: 'Server unavailable',
+      });
+
+      const node: WorkflowNode = {
+        id: 'http-1',
+        type: 'httpRequest',
+        position: { x: 0, y: 0 },
+        data: {
+          label: 'HTTP Request',
+          url: 'https://api.example.com',
+          method: 'GET',
+          retryConfig: {
+            maxAttempts: 2,
+            initialDelayMs: 10,
+            backoffMultiplier: 1,
+          },
+        },
+      };
+      const context: ExecutionContext = { trigger: {} };
+
+      const result = await service.executeStepWithRetry(node, context);
+
+      expect(result.success).toBe(false);
+      expect(result.error).toBe('Server unavailable');
+      expect(result.retryAttempts).toBe(2);
+      expect(result.retriedSuccessfully).toBe(false);
+    });
+
+    it('should use default retry config when not specified', async () => {
+      httpRequestAction.execute.mockResolvedValue({
+        success: true,
+        data: { status: 200 },
+      });
+
+      const node: WorkflowNode = {
+        id: 'http-1',
+        type: 'httpRequest',
+        position: { x: 0, y: 0 },
+        data: {
+          label: 'HTTP Request',
+          url: 'https://api.example.com',
+          method: 'GET',
+          retryConfig: { maxAttempts: 1 },
+        },
+      };
+      const context: ExecutionContext = { trigger: {} };
+
+      const result = await service.executeStepWithRetry(node, context);
+
+      expect(result.success).toBe(true);
+      expect(result.retryAttempts).toBe(0);
+    });
+
+    it('should respect maxDelayMs cap', async () => {
+      let callCount = 0;
+      const callTimes: number[] = [];
+
+      httpRequestAction.execute.mockImplementation(() => {
+        callCount++;
+        callTimes.push(Date.now());
+        if (callCount < 3) {
+          return Promise.resolve({
+            success: false,
+            error: 'Timeout',
+          });
+        }
+        return Promise.resolve({
+          success: true,
+          data: { status: 200 },
+        });
+      });
+
+      const node: WorkflowNode = {
+        id: 'http-1',
+        type: 'httpRequest',
+        position: { x: 0, y: 0 },
+        data: {
+          label: 'HTTP Request',
+          url: 'https://api.example.com',
+          method: 'GET',
+          retryConfig: {
+            maxAttempts: 3,
+            initialDelayMs: 100,
+            backoffMultiplier: 10, // Would be 100, 1000 without cap
+            maxDelayMs: 150,
+          },
+        },
+      };
+      const context: ExecutionContext = { trigger: {} };
+
+      const result = await service.executeStepWithRetry(node, context);
+
+      expect(result.success).toBe(true);
+      // Verify delays were capped (allowing some tolerance)
+      if (callTimes.length >= 3) {
+        const delay2 = callTimes[2] - callTimes[1];
+        expect(delay2).toBeLessThanOrEqual(200); // maxDelayMs + tolerance
+      }
+    });
+  });
 });

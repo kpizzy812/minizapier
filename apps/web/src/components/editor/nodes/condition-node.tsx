@@ -3,7 +3,7 @@
 import { memo } from 'react';
 import { type NodeProps, Position } from '@xyflow/react';
 import { GitBranch, Check, X } from 'lucide-react';
-import { BaseNode } from './base-node';
+import { BaseNode, NodeExecutionStatus } from './base-node';
 
 export interface ConditionNodeData {
   type: 'condition';
@@ -14,6 +14,7 @@ export interface ConditionNodeData {
 
 function ConditionNodeComponent({ data, selected }: NodeProps) {
   const nodeData = data as unknown as ConditionNodeData;
+  const executionStatus = (data as unknown as { executionStatus?: NodeExecutionStatus }).executionStatus;
 
   return (
     <BaseNode
@@ -24,6 +25,7 @@ function ConditionNodeComponent({ data, selected }: NodeProps) {
       }}
       selected={selected}
       variant="condition"
+      executionStatus={executionStatus}
       targetHandles={[{ id: 'target', position: Position.Top }]}
       sourceHandles={[
         { id: 'true', label: 'True', position: Position.Bottom, style: { left: '25%' } },

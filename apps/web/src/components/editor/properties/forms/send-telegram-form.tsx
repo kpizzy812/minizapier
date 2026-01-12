@@ -1,7 +1,7 @@
 'use client';
 
 import { Input } from '@/components/ui/input';
-import { FieldWrapper } from '../components';
+import { FieldWrapper, CredentialSelect } from '../components';
 import { TemplateInput } from '../../data-picker';
 import { useAvailableData } from '@/hooks/use-available-data';
 
@@ -14,6 +14,7 @@ export function SendTelegramForm({ data, onUpdate }: SendTelegramFormProps) {
   const sources = useAvailableData();
 
   const label = (data.label as string) || 'Telegram Message';
+  const credentialId = data.credentialId as string | undefined;
   const chatId = (data.chatId as string) || '';
   const message = (data.message as string) || '';
 
@@ -28,16 +29,29 @@ export function SendTelegramForm({ data, onUpdate }: SendTelegramFormProps) {
         />
       </FieldWrapper>
 
+      {/* Telegram Bot Credential */}
+      <FieldWrapper
+        label="Telegram Bot"
+        hint="Select the bot to send messages"
+        required
+      >
+        <CredentialSelect
+          value={credentialId}
+          onChange={(id) => onUpdate({ credentialId: id })}
+          credentialType="TELEGRAM"
+        />
+      </FieldWrapper>
+
       {/* Chat ID */}
       <FieldWrapper
         label="Chat ID"
-        hint="Telegram chat ID. Can be from data or hardcoded (e.g., @mychannel)"
+        hint="Chat or channel ID. Example: @mychannel or 123456789"
         required
       >
         <TemplateInput
           value={chatId}
           onChange={(v) => onUpdate({ chatId: v })}
-          placeholder="{{trigger.body.chatId}} or 123456789"
+          placeholder="@channel or 123456789"
           sources={sources}
         />
       </FieldWrapper>
@@ -45,13 +59,13 @@ export function SendTelegramForm({ data, onUpdate }: SendTelegramFormProps) {
       {/* Message */}
       <FieldWrapper
         label="Message"
-        hint="Message text to send. Supports Markdown formatting and variables."
+        hint="Message text. Supports Markdown formatting"
         required
       >
         <TemplateInput
           value={message}
           onChange={(v) => onUpdate({ message: v })}
-          placeholder="*New Alert*&#10;&#10;{{trigger.body.message}}"
+          placeholder="Hello! This is a test message"
           sources={sources}
           multiline
           rows={5}

@@ -1,0 +1,107 @@
+{
+  "id": "template-quick-test",
+  "name": "Quick Test (Telegram Only)",
+  "description": "Fast test of core features. Only requires Telegram bot. Tests: Webhook, Transform, HTTP, Condition, Telegram",
+  "category": "testing",
+  "requiredCredentials": ["telegram"],
+  "placeholders": {
+    "TELEGRAM_CHAT_ID": "Your Telegram chat ID (get from @userinfobot)"
+  },
+  "definition": {
+    "nodes": [
+      {
+        "id": "trigger",
+        "type": "webhookTrigger",
+        "position": { "x": 300, "y": 0 },
+        "data": {
+          "type": "webhookTrigger",
+          "label": "1. Webhook Trigger",
+          "description": "Entry point"
+        }
+      },
+      {
+        "id": "transform",
+        "type": "transform",
+        "position": { "x": 300, "y": 120 },
+        "data": {
+          "type": "transform",
+          "label": "2. Transform",
+          "description": "Extract data from request",
+          "expression": "$.trigger.body"
+        }
+      },
+      {
+        "id": "http",
+        "type": "httpRequest",
+        "position": { "x": 300, "y": 240 },
+        "data": {
+          "type": "httpRequest",
+          "label": "3. HTTP Request",
+          "description": "Test external API call",
+          "method": "GET",
+          "url": "https://httpbin.org/json"
+        }
+      },
+      {
+        "id": "condition",
+        "type": "condition",
+        "position": { "x": 300, "y": 360 },
+        "data": {
+          "type": "condition",
+          "label": "4. Condition (IF/ELSE)",
+          "description": "Branch based on HTTP status",
+          "expression": "{{http.status}} === 200"
+        }
+      },
+      {
+        "id": "telegram_success",
+        "type": "sendTelegram",
+        "position": { "x": 100, "y": 480 },
+        "data": {
+          "type": "sendTelegram",
+          "label": "5a. Telegram (Success)",
+          "description": "Success notification",
+          "chatId": "{{TELEGRAM_CHAT_ID}}",
+          "message": "MiniZapier Quick Test PASSED!\n\nInput: {{transform}}\nHTTP Status: {{http.status}}\nAPI Response: {{http.body.slideshow.title}}",
+          "credentialId": "{{CREDENTIAL_TELEGRAM}}"
+        }
+      },
+      {
+        "id": "telegram_fail",
+        "type": "sendTelegram",
+        "position": { "x": 500, "y": 480 },
+        "data": {
+          "type": "sendTelegram",
+          "label": "5b. Telegram (Fail)",
+          "description": "Failure notification",
+          "chatId": "{{TELEGRAM_CHAT_ID}}",
+          "message": "MiniZapier Quick Test FAILED!\n\nHTTP Status: {{http.status}}\nExpected: 200",
+          "credentialId": "{{CREDENTIAL_TELEGRAM}}"
+        }
+      }
+    ],
+    "edges": [
+      { "id": "e1", "source": "trigger", "target": "transform" },
+      { "id": "e2", "source": "transform", "target": "http" },
+      { "id": "e3", "source": "http", "target": "condition" },
+      { "id": "e4", "source": "condition", "target": "telegram_success", "sourceHandle": "true" },
+      { "id": "e5", "source": "condition", "target": "telegram_fail", "sourceHandle": "false" }
+    ]
+  },
+  "testInstructions": {
+    "setup": [
+      "1. Create Telegram bot via @BotFather, get token",
+      "2. Get your chat ID from @userinfobot",
+      "3. Create Telegram credential in Settings > Credentials",
+      "4. Create workflow from this template",
+      "5. Fill in your TELEGRAM_CHAT_ID"
+    ],
+    "test": [
+      "curl -X POST <WEBHOOK_URL> \\",
+      "  -H 'Content-Type: application/json' \\",
+      "  -d '{\"message\": \"Hello!\", \"test\": true}'",
+      "",
+      "Expected: Telegram message with test results"
+    ]
+  }
+}

@@ -7,3 +7,4 @@ export { SendTelegramForm } from './send-telegram-form';
 export { DatabaseQueryForm } from './database-query-form';
 export { TransformForm } from './transform-form';
 export { ConditionForm } from './condition-form';
+export { AIRequestForm } from './ai-request-form';

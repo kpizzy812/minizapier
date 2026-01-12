@@ -1,5 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { api, CreateWorkflowInput, UpdateWorkflowInput } from '@/lib/api';
+import { executionKeys } from './use-executions';
 
 // Query keys
 export const workflowKeys = {
@@ -88,6 +89,20 @@ export function useToggleWorkflowActive() {
     onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: workflowKeys.lists() });
       queryClient.setQueryData(workflowKeys.detail(data.id), data);
+    },
+  });
+}
+
+// Test workflow execution
+export function useTestWorkflow() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: ({ id, testData }: { id: string; testData?: unknown }) =>
+      api.testWorkflow(id, testData),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: executionKeys.lists() });
+      queryClient.invalidateQueries({ queryKey: executionKeys.stats() });
     },
   });
 }

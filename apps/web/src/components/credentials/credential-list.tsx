@@ -15,6 +15,7 @@ import {
   Globe,
   KeyRound,
   Send,
+  Sparkles,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
@@ -70,6 +71,7 @@ const credentialTypeInfo: Record<
   HTTP_API_KEY: { label: 'API Key', icon: Key, color: 'bg-yellow-500' },
   DATABASE: { label: 'Database', icon: Database, color: 'bg-red-500' },
   RESEND: { label: 'Resend Email', icon: Send, color: 'bg-pink-500' },
+  AI: { label: 'AI Provider', icon: Sparkles, color: 'bg-violet-500' },
 };
 
 export function CredentialList() {

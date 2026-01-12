@@ -17,24 +17,40 @@
   - Формы создания/редактирования для каждого типа (7 типов)
   - Кнопка "Test connection"
   - Таб Credentials на главной странице
-- [ ] **Тестовый запуск workflow** - (делает другая сессия)
+- [x] **Тестовый запуск workflow** ✅
   - API endpoint `POST /workflows/:id/test`
-  - Модальное окно для ввода тестовых данных
-  - Сохранение sampleData для Data Picker
+  - UI кнопка "Test" в toolbar + TestExecutionPanel
+  - Real-time обновление статуса через polling
+- [x] **Docker production build** ✅ (docker-compose.prod.yml + Dockerfile)
+- [x] **Деплой на VPS** ✅ (deploy.sh - интерактивная панель)
 
-### Важные (из SPEC)
+### Важные (из SPEC - требуют доработки)
 - [x] **Пауза workflow** - логика для статуса PAUSED ✅
   - Интеграция ScheduleTriggerService в WorkflowsController
   - При деактивации workflow - pauseSchedule для schedule triggers
   - При активации workflow - resumeSchedule для schedule triggers
   - UI кнопка "Activate/Deactivate" в списке workflows
 - [x] **Копирование workflow** - UI кнопка ✅ (backend + frontend готовы)
+- [x] **SSRF защита в HTTP Action** ✅ - из SPEC: "Изоляция выполнения"
+  - Блокировка localhost, 127.0.0.1, 10.x.x.x, 192.168.x.x, 172.16-31.x.x
+  - Блокировка cloud metadata (169.254.169.254, metadata.google.internal)
+  - Блокировка опасных портов (22, 5432, 6379...)
+  - 33 unit теста
+- [x] **Retry на уровне шагов** ✅ - из SPEC: "Обработка ошибок: retry"
+  - RetryConfig интерфейс (maxAttempts, initialDelayMs, backoffMultiplier, maxDelayMs)
+  - executeStepWithRetry метод с exponential backoff
+  - Поле retryAttempts в StepLog для отображения в UI
+  - Настраиваемое количество попыток per-action
+  - 6 unit тестов
 
 ### Желательные (улучшения UX)
-- [ ] **Real-time дебаггер** - WebSocket Gateway, подсветка нод
+- [x] **Real-time дебаггер** - WebSocket Gateway, подсветка нод ✅
+  - ExecutionGateway (NestJS WebSocket Gateway с Socket.io)
+  - ExecutionEventsService для эмита событий из WorkflowProcessor
+  - useExecutionSocket хук (Zustand store + Socket.io client)
+  - Подсветка нод: running (синий pulse), success (зелёный), error (красный), skipped (серый)
+  - Статус индикаторы на нодах (спиннер, галочка, крестик)
 - [ ] **Автосохранение редактора**
-- [ ] **Docker production build** - финальная настройка
-- [ ] **Деплой на VPS** - Traefik + SSL
 
 ---
 
@@ -88,22 +104,56 @@
 - [x] Credentials REST API (CRUD + test connection)
 - [x] StepExecutorService интеграция с реальными actions
 
-### Блок 6: Real-time дебаггер (~2ч)
-- [ ] WebSocket Gateway
-- [ ] Подсветка выполняемых нод
-- [ ] Панель input/output
-- [ ] Replay с любого шага
+### Блок 6: Real-time дебаггер ✅
+- [x] WebSocket Gateway (NestJS + Socket.io)
+- [x] Подсветка выполняемых нод (running, success, error, skipped)
+- [x] Статус индикаторы (спиннер, галочка, крестик, минус)
+- [x] Интеграция с TestExecutionPanel
+- [ ] Replay с любого шага (отложено)
 
-### Блок 7: Дашборд + Деплой
+### Блок 7: Дашборд + Деплой ✅
 - [x] Список workflows + история выполнений (UI)
 - [x] Статистика выполнений (компонент ExecutionStats)
 - [x] Уведомления об ошибках (email через Resend API)
-- [ ] Docker production build
-- [ ] Деплой на VPS (Traefik + SSL)
+- [x] Docker production build (docker-compose.prod.yml + Dockerfile)
+- [x] Деплой на VPS (deploy.sh интерактивная панель)
 
 ---
 
 ## Лог изменений
+
+### 2026-01-12 (продолжение 5)
+- ✅ **Real-time дебаггер**: WebSocket для подсветки нод при выполнении
+  - ExecutionGateway (NestJS @WebSocketGateway с Socket.io)
+  - ExecutionEventsService для эмита событий (start, step:start, step:complete, complete)
+  - execution-events.dto.ts с типами событий
+  - useExecutionSocket хук (Socket.io client + Zustand store)
+  - useExecutionStatusStore для хранения статусов нод
+  - BaseNode обновлён с executionStatusStyles (ring-2, animate-pulse)
+  - StatusIndicator компонент (Loader2, CheckCircle2, XCircle, Minus)
+  - WorkflowCanvas интеграция nodeStatuses через useMemo
+  - TriggerNode, ActionNode, ConditionNode передают executionStatus
+  - WorkflowEditor интеграция useExecutionSocket при тестовом запуске
+  - forwardRef для решения circular dependency ExecutionsModule/QueueModule
+
+### 2026-01-12 (продолжение 4)
+- ✅ **Retry на уровне шагов**: Exponential backoff для отдельных шагов
+  - RetryConfig интерфейс в shared package (maxAttempts, initialDelayMs, backoffMultiplier, maxDelayMs)
+  - executeStepWithRetry метод в StepExecutorService
+  - StepResultWithRetry интерфейс с retryAttempts и retriedSuccessfully
+  - Поле retryAttempts Int? в Prisma schema (StepLog)
+  - Интеграция в WorkflowProcessor (логирование retry в БД)
+  - Автоматическое применение изменений схемы в deploy.sh (prisma db push)
+  - 6 unit тестов
+
+### 2026-01-12 (продолжение 3)
+- ✅ **SSRF защита**: Изоляция выполнения HTTP Action
+  - url-validator.ts утилита для валидации URL
+  - Блокировка localhost, приватных IP (10.x, 192.168.x, 172.16-31.x)
+  - Блокировка cloud metadata endpoints (AWS, GCP)
+  - Блокировка опасных портов (SSH, PostgreSQL, Redis, etc.)
+  - Интеграция в HttpRequestAction
+  - 33 unit теста
 
 ### 2026-01-12 (продолжение 2)
 - ✅ **Пауза workflow**: Интеграция schedule triggers с activate/deactivate

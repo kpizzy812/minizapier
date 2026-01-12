@@ -83,14 +83,11 @@ describe('TriggersController', () => {
     it('should create a webhook trigger', async () => {
       service.create.mockResolvedValue(mockWebhookTrigger);
 
-      const result = await controller.create(
-        { 'x-user-id': 'user-123' },
-        {
-          workflowId: 'wf-123',
-          type: TriggerType.WEBHOOK,
-          config: { secret: 'my-secret' },
-        },
-      );
+      const result = await controller.create('user-123', {
+        workflowId: 'wf-123',
+        type: TriggerType.WEBHOOK,
+        config: { secret: 'my-secret' },
+      });
 
       expect(result).toEqual({
         data: mockWebhookTrigger,
@@ -106,14 +103,11 @@ describe('TriggersController', () => {
     it('should create a schedule trigger', async () => {
       service.create.mockResolvedValue(mockScheduleTrigger);
 
-      const result = await controller.create(
-        { 'x-user-id': 'user-123' },
-        {
-          workflowId: 'wf-456',
-          type: TriggerType.SCHEDULE,
-          config: { cron: '0 0 9 * * 1-5' },
-        },
-      );
+      const result = await controller.create('user-123', {
+        workflowId: 'wf-456',
+        type: TriggerType.SCHEDULE,
+        config: { cron: '0 0 9 * * 1-5' },
+      });
 
       expect(result).toEqual({
         data: mockScheduleTrigger,
@@ -124,14 +118,11 @@ describe('TriggersController', () => {
     it('should create an email trigger', async () => {
       service.create.mockResolvedValue(mockEmailTrigger);
 
-      const result = await controller.create(
-        { 'x-user-id': 'user-123' },
-        {
-          workflowId: 'wf-789',
-          type: TriggerType.EMAIL,
-          config: {},
-        },
-      );
+      const result = await controller.create('user-123', {
+        workflowId: 'wf-789',
+        type: TriggerType.EMAIL,
+        config: {},
+      });
 
       expect(result).toEqual({
         data: mockEmailTrigger,
@@ -145,33 +136,12 @@ describe('TriggersController', () => {
       );
 
       await expect(
-        controller.create(
-          { 'x-user-id': 'user-123' },
-          {
-            workflowId: 'wf-123',
-            type: TriggerType.WEBHOOK,
-            config: {},
-          },
-        ),
-      ).rejects.toThrow(ConflictException);
-    });
-
-    it('should use temp-user-id when x-user-id not provided', async () => {
-      service.create.mockResolvedValue(mockWebhookTrigger);
-
-      await controller.create(
-        {},
-        {
+        controller.create('user-123', {
           workflowId: 'wf-123',
           type: TriggerType.WEBHOOK,
           config: {},
-        },
-      );
-
-      expect(service.create).toHaveBeenCalledWith(
-        'temp-user-id',
-        expect.any(Object),
-      );
+        }),
+      ).rejects.toThrow(ConflictException);
     });
   });
 
@@ -179,10 +149,7 @@ describe('TriggersController', () => {
     it('should return trigger for workflow', async () => {
       service.findByWorkflowId.mockResolvedValue(mockWebhookTrigger);
 
-      const result = await controller.findByWorkflow(
-        { 'x-user-id': 'user-123' },
-        'wf-123',
-      );
+      const result = await controller.findByWorkflow('user-123', 'wf-123');
 
       expect(result).toEqual({ data: mockWebhookTrigger });
       expect(service.findByWorkflowId).toHaveBeenCalledWith(
@@ -194,10 +161,7 @@ describe('TriggersController', () => {
     it('should return null when workflow has no trigger', async () => {
       service.findByWorkflowId.mockResolvedValue(null);
 
-      const result = await controller.findByWorkflow(
-        { 'x-user-id': 'user-123' },
-        'wf-123',
-      );
+      const result = await controller.findByWorkflow('user-123', 'wf-123');
 
       expect(result).toEqual({ data: null });
     });
@@ -208,7 +172,7 @@ describe('TriggersController', () => {
       );
 
       await expect(
-        controller.findByWorkflow({ 'x-user-id': 'user-123' }, 'missing'),
+        controller.findByWorkflow('user-123', 'missing'),
       ).rejects.toThrow(NotFoundException);
     });
   });
@@ -217,10 +181,7 @@ describe('TriggersController', () => {
     it('should return trigger by id', async () => {
       service.findOne.mockResolvedValue(mockWebhookTrigger);
 
-      const result = await controller.findOne(
-        { 'x-user-id': 'user-123' },
-        'trigger-123',
-      );
+      const result = await controller.findOne('user-123', 'trigger-123');
 
       expect(result).toEqual({ data: mockWebhookTrigger });
       expect(service.findOne).toHaveBeenCalledWith('trigger-123', 'user-123');
@@ -231,9 +192,9 @@ describe('TriggersController', () => {
         new NotFoundException('Trigger not found'),
       );
 
-      await expect(
-        controller.findOne({ 'x-user-id': 'user-123' }, 'missing'),
-      ).rejects.toThrow(NotFoundException);
+      await expect(controller.findOne('user-123', 'missing')).rejects.toThrow(
+        NotFoundException,
+      );
     });
   });
 
@@ -245,11 +206,9 @@ describe('TriggersController', () => {
       };
       service.update.mockResolvedValue(updatedTrigger);
 
-      const result = await controller.update(
-        { 'x-user-id': 'user-123' },
-        'trigger-123',
-        { config: { secret: 'new-secret' } },
-      );
+      const result = await controller.update('user-123', 'trigger-123', {
+        config: { secret: 'new-secret' },
+      });
 
       expect(result).toEqual({
         data: updatedTrigger,
@@ -266,7 +225,7 @@ describe('TriggersController', () => {
       );
 
       await expect(
-        controller.update({ 'x-user-id': 'user-123' }, 'missing', {
+        controller.update('user-123', 'missing', {
           config: {},
         }),
       ).rejects.toThrow(NotFoundException);
@@ -277,10 +236,7 @@ describe('TriggersController', () => {
     it('should delete a trigger', async () => {
       service.remove.mockResolvedValue(undefined);
 
-      const result = await controller.remove(
-        { 'x-user-id': 'user-123' },
-        'trigger-123',
-      );
+      const result = await controller.remove('user-123', 'trigger-123');
 
       expect(result).toEqual({ message: 'Trigger deleted successfully' });
       expect(service.remove).toHaveBeenCalledWith('trigger-123', 'user-123');
@@ -291,9 +247,9 @@ describe('TriggersController', () => {
         new NotFoundException('Trigger not found'),
       );
 
-      await expect(
-        controller.remove({ 'x-user-id': 'user-123' }, 'missing'),
-      ).rejects.toThrow(NotFoundException);
+      await expect(controller.remove('user-123', 'missing')).rejects.toThrow(
+        NotFoundException,
+      );
     });
   });
 
@@ -302,10 +258,7 @@ describe('TriggersController', () => {
       const activatedTrigger = { ...mockScheduleTrigger, isActive: true };
       service.activate.mockResolvedValue(activatedTrigger);
 
-      const result = await controller.activate(
-        { 'x-user-id': 'user-123' },
-        'trigger-456',
-      );
+      const result = await controller.activate('user-123', 'trigger-456');
 
       expect(result).toEqual({
         data: activatedTrigger,
@@ -319,9 +272,9 @@ describe('TriggersController', () => {
         new NotFoundException('Trigger not found'),
       );
 
-      await expect(
-        controller.activate({ 'x-user-id': 'user-123' }, 'missing'),
-      ).rejects.toThrow(NotFoundException);
+      await expect(controller.activate('user-123', 'missing')).rejects.toThrow(
+        NotFoundException,
+      );
     });
   });
 
@@ -330,10 +283,7 @@ describe('TriggersController', () => {
       const deactivatedTrigger = { ...mockScheduleTrigger, isActive: false };
       service.deactivate.mockResolvedValue(deactivatedTrigger);
 
-      const result = await controller.deactivate(
-        { 'x-user-id': 'user-123' },
-        'trigger-456',
-      );
+      const result = await controller.deactivate('user-123', 'trigger-456');
 
       expect(result).toEqual({
         data: deactivatedTrigger,
@@ -351,7 +301,7 @@ describe('TriggersController', () => {
       );
 
       await expect(
-        controller.deactivate({ 'x-user-id': 'user-123' }, 'missing'),
+        controller.deactivate('user-123', 'missing'),
       ).rejects.toThrow(NotFoundException);
     });
   });
@@ -365,7 +315,7 @@ describe('TriggersController', () => {
       service.regenerateWebhookUrl.mockResolvedValue(updatedTrigger);
 
       const result = await controller.regenerateWebhookUrl(
-        { 'x-user-id': 'user-123' },
+        'user-123',
         'trigger-123',
       );
 
@@ -385,7 +335,7 @@ describe('TriggersController', () => {
       );
 
       await expect(
-        controller.regenerateWebhookUrl({ 'x-user-id': 'user-123' }, 'missing'),
+        controller.regenerateWebhookUrl('user-123', 'missing'),
       ).rejects.toThrow(NotFoundException);
     });
 
@@ -395,10 +345,7 @@ describe('TriggersController', () => {
       );
 
       await expect(
-        controller.regenerateWebhookUrl(
-          { 'x-user-id': 'user-123' },
-          'trigger-456',
-        ),
+        controller.regenerateWebhookUrl('user-123', 'trigger-456'),
       ).rejects.toThrow(BadRequestException);
     });
   });

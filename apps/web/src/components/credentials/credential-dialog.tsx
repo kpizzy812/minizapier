@@ -36,12 +36,17 @@ import {
   HttpApiKeyCredentialData,
   DatabaseCredentialData,
   ResendCredentialData,
+  AICredentialData,
 } from '@/lib/api';
 
 interface CredentialDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   credential?: Credential | null;
+  /** Pre-selected credential type (for creating from action forms) */
+  defaultType?: CredentialType;
+  /** Callback when credential is successfully created/updated */
+  onSuccess?: (credential: Credential) => void;
 }
 
 // Credential type options
@@ -53,6 +58,7 @@ const credentialTypes: { value: CredentialType; label: string; description: stri
   { value: 'HTTP_API_KEY', label: 'API Key', description: 'API key for HTTP requests' },
   { value: 'DATABASE', label: 'Database', description: 'PostgreSQL connection string' },
   { value: 'RESEND', label: 'Resend Email', description: 'Resend API key for sending emails' },
+  { value: 'AI', label: 'AI Provider', description: 'OpenAI-compatible API (DeepSeek, OpenAI, etc.)' },
 ];
 
 // Default values for each credential type
@@ -72,6 +78,8 @@ function getDefaultData(type: CredentialType): CredentialData {
       return { connectionString: '' } as DatabaseCredentialData;
     case 'RESEND':
       return { apiKey: '' } as ResendCredentialData;
+    case 'AI':
+      return { apiKey: '', baseUrl: '', model: '' } as AICredentialData;
   }
 }
 
@@ -79,15 +87,19 @@ export function CredentialDialog({
   open,
   onOpenChange,
   credential,
+  defaultType,
+  onSuccess,
 }: CredentialDialogProps) {
   const createCredential = useCreateCredential();
   const updateCredential = useUpdateCredential();
 
   const isEditing = !!credential;
+  // If defaultType is provided, lock to that type
+  const isTypeLocked = !!defaultType && !isEditing;
 
   const [name, setName] = useState('');
-  const [type, setType] = useState<CredentialType>('TELEGRAM');
-  const [data, setData] = useState<CredentialData>(getDefaultData('TELEGRAM'));
+  const [type, setType] = useState<CredentialType>(defaultType || 'TELEGRAM');
+  const [data, setData] = useState<CredentialData>(getDefaultData(defaultType || 'TELEGRAM'));
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   // Reset form when dialog opens/closes or credential changes
@@ -100,12 +112,13 @@ export function CredentialDialog({
         // So we use default values - user needs to re-enter
         setData(getDefaultData(credential.type));
       } else {
+        const initialType = defaultType || 'TELEGRAM';
         setName('');
-        setType('TELEGRAM');
-        setData(getDefaultData('TELEGRAM'));
+        setType(initialType);
+        setData(getDefaultData(initialType));
       }
     }
-  }, [open, credential]);
+  }, [open, credential, defaultType]);
 
   // Update data when type changes
   const handleTypeChange = (newType: CredentialType) => {
@@ -135,14 +148,16 @@ export function CredentialDialog({
 
     try {
       if (isEditing && credential) {
-        await updateCredential.mutateAsync({
+        const updated = await updateCredential.mutateAsync({
           id: credential.id,
           input: { name, data },
         });
         toast.success('Credential updated');
+        onSuccess?.(updated);
       } else {
-        await createCredential.mutateAsync({ name, type, data });
+        const created = await createCredential.mutateAsync({ name, type, data });
         toast.success('Credential created');
+        onSuccess?.(created);
       }
       onOpenChange(false);
     } catch {
@@ -227,6 +242,14 @@ export function CredentialDialog({
         }
         return true;
       }
+      case 'AI': {
+        const d = data as AICredentialData;
+        if (!d.apiKey?.trim()) {
+          toast.error('Please enter AI API key');
+          return false;
+        }
+        return true;
+      }
     }
   };
 
@@ -282,6 +305,13 @@ export function CredentialDialog({
             onChange={updateDataField}
           />
         );
+      case 'AI':
+        return (
+          <AIForm
+            data={data as AICredentialData}
+            onChange={updateDataField}
+          />
+        );
     }
   };
 
@@ -312,8 +342,8 @@ export function CredentialDialog({
               />
             </div>
 
-            {/* Type selector (only for new credentials) */}
-            {!isEditing && (
+            {/* Type selector (only for new credentials, hidden if type is locked) */}
+            {!isEditing && !isTypeLocked && (
               <div className="grid gap-2">
                 <Label>Type</Label>
                 <Select value={type} onValueChange={(v) => handleTypeChange(v as CredentialType)}>
@@ -333,6 +363,15 @@ export function CredentialDialog({
                     ))}
                   </SelectContent>
                 </Select>
+              </div>
+            )}
+            {/* Show type label when locked */}
+            {isTypeLocked && (
+              <div className="grid gap-2">
+                <Label>Type</Label>
+                <div className="rounded-md border bg-muted/50 px-3 py-2 text-sm">
+                  {credentialTypes.find(ct => ct.value === type)?.label || type}
+                </div>
               </div>
             )}
 
@@ -545,6 +584,50 @@ function ResendForm({ data, onChange }: FormProps<ResendCredentialData>) {
       <p className="text-xs text-muted-foreground">
         Get your API key from resend.com dashboard
       </p>
+    </div>
+  );
+}
+
+function AIForm({ data, onChange }: FormProps<AICredentialData>) {
+  return (
+    <div className="grid gap-4">
+      <div className="grid gap-2">
+        <Label htmlFor="aiApiKey">API Key</Label>
+        <Input
+          id="aiApiKey"
+          type="password"
+          placeholder="sk-..."
+          value={data.apiKey}
+          onChange={(e) => onChange('apiKey', e.target.value)}
+        />
+        <p className="text-xs text-muted-foreground">
+          Your OpenAI-compatible API key
+        </p>
+      </div>
+      <div className="grid gap-2">
+        <Label htmlFor="baseUrl">Base URL (optional)</Label>
+        <Input
+          id="baseUrl"
+          placeholder="https://api.openai.com/v1"
+          value={data.baseUrl ?? ''}
+          onChange={(e) => onChange('baseUrl', e.target.value)}
+        />
+        <p className="text-xs text-muted-foreground">
+          Leave empty for OpenAI. Use https://api.deepseek.com for DeepSeek.
+        </p>
+      </div>
+      <div className="grid gap-2">
+        <Label htmlFor="model">Model (optional)</Label>
+        <Input
+          id="model"
+          placeholder="gpt-4o-mini"
+          value={data.model ?? ''}
+          onChange={(e) => onChange('model', e.target.value)}
+        />
+        <p className="text-xs text-muted-foreground">
+          Default model to use. Can be overridden in each AI action.
+        </p>
+      </div>
     </div>
   );
 }

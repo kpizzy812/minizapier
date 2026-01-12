@@ -2,7 +2,15 @@
 
 import { memo, type ReactNode } from 'react';
 import { Handle, Position } from '@xyflow/react';
+import { CheckCircle2, XCircle, Loader2, MinusCircle } from 'lucide-react';
 import { cn } from '@/lib/utils';
+
+export type NodeExecutionStatus =
+  | 'pending'
+  | 'running'
+  | 'success'
+  | 'error'
+  | 'skipped';
 
 export interface BaseNodeData {
   label: string;
@@ -25,6 +33,7 @@ interface BaseNodeProps {
   variant: 'trigger' | 'action' | 'condition';
   sourceHandles?: HandleConfig[];
   targetHandles?: HandleConfig[];
+  executionStatus?: NodeExecutionStatus;
 }
 
 const variantStyles = {
@@ -48,6 +57,39 @@ const variantStyles = {
   },
 };
 
+/**
+ * Execution status styles for node highlighting
+ */
+const executionStatusStyles: Record<NodeExecutionStatus, string> = {
+  pending: '',
+  running: 'ring-2 ring-blue-500 ring-offset-2 animate-pulse',
+  success: 'ring-2 ring-green-500 ring-offset-2',
+  error: 'ring-2 ring-red-500 ring-offset-2',
+  skipped: 'opacity-50',
+};
+
+/**
+ * Status indicator icon component
+ */
+function StatusIndicator({ status }: { status?: NodeExecutionStatus }) {
+  if (!status || status === 'pending') return null;
+
+  const iconClass = 'h-4 w-4';
+
+  switch (status) {
+    case 'running':
+      return <Loader2 className={cn(iconClass, 'text-blue-500 animate-spin')} />;
+    case 'success':
+      return <CheckCircle2 className={cn(iconClass, 'text-green-500')} />;
+    case 'error':
+      return <XCircle className={cn(iconClass, 'text-red-500')} />;
+    case 'skipped':
+      return <MinusCircle className={cn(iconClass, 'text-gray-400')} />;
+    default:
+      return null;
+  }
+}
+
 function BaseNodeComponent({
   children,
   data,
@@ -55,6 +97,7 @@ function BaseNodeComponent({
   variant,
   sourceHandles = [{ id: 'source', position: Position.Bottom }],
   targetHandles = [{ id: 'target', position: Position.Top }],
+  executionStatus,
 }: BaseNodeProps) {
   const styles = variantStyles[variant];
 
@@ -70,7 +113,8 @@ function BaseNodeComponent({
       className={cn(
         'min-w-[200px] max-w-[280px] rounded-lg border-2 bg-card shadow-md transition-all',
         styles.border,
-        selected && 'ring-2 ring-primary ring-offset-2'
+        selected && !executionStatus && 'ring-2 ring-primary ring-offset-2',
+        executionStatus && executionStatusStyles[executionStatus]
       )}
     >
       {/* Target Handles */}
@@ -93,7 +137,8 @@ function BaseNodeComponent({
         )}
       >
         {data.icon && <span className="flex-shrink-0">{data.icon}</span>}
-        <span className="truncate text-sm font-medium">{data.label}</span>
+        <span className="flex-1 truncate text-sm font-medium">{data.label}</span>
+        <StatusIndicator status={executionStatus} />
       </div>
 
       {/* Body */}

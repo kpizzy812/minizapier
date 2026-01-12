@@ -1,7 +1,7 @@
 'use client';
 
 import { Input } from '@/components/ui/input';
-import { FieldWrapper } from '../components';
+import { FieldWrapper, CredentialSelect } from '../components';
 import { TemplateInput } from '../../data-picker';
 import { useAvailableData } from '@/hooks/use-available-data';
 
@@ -14,6 +14,7 @@ export function SendEmailForm({ data, onUpdate }: SendEmailFormProps) {
   const sources = useAvailableData();
 
   const label = (data.label as string) || 'Send Email';
+  const credentialId = data.credentialId as string | undefined;
   const to = (data.to as string) || '';
   const subject = (data.subject as string) || '';
   const body = (data.body as string) || '';
@@ -29,16 +30,29 @@ export function SendEmailForm({ data, onUpdate }: SendEmailFormProps) {
         />
       </FieldWrapper>
 
+      {/* Email Credential - optional, supports RESEND or SMTP */}
+      <FieldWrapper
+        label="Email Account (optional)"
+        hint="Select Resend API or SMTP server for sending"
+      >
+        <CredentialSelect
+          value={credentialId}
+          onChange={(id) => onUpdate({ credentialId: id })}
+          credentialType={['RESEND', 'SMTP']}
+          placeholder="Use default"
+        />
+      </FieldWrapper>
+
       {/* To */}
       <FieldWrapper
         label="To"
-        hint="Recipient email address. You can use variables or separate multiple with comma."
+        hint="Recipient email. Multiple addresses separated by comma"
         required
       >
         <TemplateInput
           value={to}
           onChange={(v) => onUpdate({ to: v })}
-          placeholder="{{trigger.body.email}} or user@example.com"
+          placeholder="user@example.com"
           sources={sources}
         />
       </FieldWrapper>
@@ -46,13 +60,13 @@ export function SendEmailForm({ data, onUpdate }: SendEmailFormProps) {
       {/* Subject */}
       <FieldWrapper
         label="Subject"
-        hint="Email subject line. Click the database icon to insert data."
+        hint="Email subject line"
         required
       >
         <TemplateInput
           value={subject}
           onChange={(v) => onUpdate({ subject: v })}
-          placeholder="New order from {{trigger.body.customer}}"
+          placeholder="Email subject"
           sources={sources}
         />
       </FieldWrapper>
@@ -60,13 +74,13 @@ export function SendEmailForm({ data, onUpdate }: SendEmailFormProps) {
       {/* Body */}
       <FieldWrapper
         label="Message"
-        hint="Email body. You can use HTML or plain text with variables."
+        hint="Email body. HTML is supported"
         required
       >
         <TemplateInput
           value={body}
           onChange={(v) => onUpdate({ body: v })}
-          placeholder="Hello {{trigger.body.name}},&#10;&#10;You have received a new order..."
+          placeholder="Hello! Your order has been received..."
           sources={sources}
           multiline
           rows={6}
@@ -77,9 +91,8 @@ export function SendEmailForm({ data, onUpdate }: SendEmailFormProps) {
       <div className="rounded-md border border-dashed p-3">
         <h4 className="mb-2 text-sm font-medium">Tips</h4>
         <ul className="space-y-1 text-xs text-muted-foreground">
-          <li>• Use HTML tags for formatting (bold, links, etc.)</li>
-          <li>• Variables are replaced with actual values when executed</li>
-          <li>• Email credentials are configured in Settings</li>
+          <li>• Use HTML tags for formatting</li>
+          <li>• Click the database icon to insert data from previous steps</li>
         </ul>
       </div>
     </div>

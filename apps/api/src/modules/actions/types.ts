@@ -86,9 +86,60 @@ export interface DatabaseQueryResult extends ActionResult {
 
 export interface TransformConfig {
   expression: string;
-  type: 'jsonpath' | 'javascript';
+  type: 'jsonpath' | 'expression'; // 'expression' uses safe expr-eval parser
 }
 
 export interface TransformResult extends ActionResult {
   data?: unknown;
+}
+
+// AI Request types
+
+/**
+ * JSON Schema field definition for structured output
+ */
+export interface SchemaField {
+  name: string;
+  type: 'string' | 'number' | 'boolean' | 'array' | 'object';
+  description?: string;
+  required?: boolean;
+  items?: SchemaField; // For array type
+  properties?: SchemaField[]; // For object type
+}
+
+/**
+ * Output schema configuration for AI structured output
+ */
+export interface OutputSchema {
+  name: string;
+  description?: string;
+  fields: SchemaField[];
+}
+
+/**
+ * AI Request Configuration
+ */
+export interface AIRequestConfig {
+  prompt: string;
+  systemPrompt?: string;
+  outputSchema?: OutputSchema;
+  temperature?: number; // 0-2, default 0.7
+  maxTokens?: number; // default 1000
+  // From credentials
+  apiKey?: string;
+  baseUrl?: string; // For different providers (OpenAI, DeepSeek, etc.)
+  model?: string;
+}
+
+export interface AIRequestResult extends ActionResult {
+  data?: {
+    content: string | Record<string, unknown>; // String or parsed JSON
+    model: string;
+    usage: {
+      promptTokens: number;
+      completionTokens: number;
+      totalTokens: number;
+    };
+    duration: number;
+  };
 }

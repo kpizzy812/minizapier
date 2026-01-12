@@ -24,6 +24,7 @@ import { UpdateWorkflowDto } from './dto/update-workflow.dto';
 import { ExecutionsService } from '../executions/executions.service';
 import { ScheduleTriggerService } from '../triggers/services';
 import { TriggersService } from '../triggers/triggers.service';
+import { TriggerType } from '../triggers/dto/triggers.dto';
 import { CurrentUser } from '../auth';
 
 @ApiTags('workflows')
@@ -45,7 +46,25 @@ export class WorkflowsController {
     @Body() createDto: CreateWorkflowDto,
   ) {
     const workflow = await this.workflowsService.create(userId, createDto);
-    return { data: workflow, message: 'Workflow created successfully' };
+
+    // Auto-sync trigger from definition
+    if (createDto.definition) {
+      await this.triggersService.syncTriggerFromDefinition(
+        workflow.id,
+        userId,
+        createDto.definition as {
+          nodes: Array<{
+            id: string;
+            type: string;
+            data?: Record<string, unknown>;
+          }>;
+        },
+      );
+    }
+
+    // Re-fetch workflow with trigger
+    const updated = await this.workflowsService.findOne(workflow.id, userId);
+    return { data: updated, message: 'Workflow created successfully' };
   }
 
   @Get()
@@ -84,7 +103,25 @@ export class WorkflowsController {
     @Body() updateDto: UpdateWorkflowDto,
   ) {
     const workflow = await this.workflowsService.update(id, userId, updateDto);
-    return { data: workflow, message: 'Workflow updated successfully' };
+
+    // Auto-sync trigger from definition if definition changed
+    if (updateDto.definition) {
+      await this.triggersService.syncTriggerFromDefinition(
+        id,
+        userId,
+        updateDto.definition as {
+          nodes: Array<{
+            id: string;
+            type: string;
+            data?: Record<string, unknown>;
+          }>;
+        },
+      );
+    }
+
+    // Re-fetch workflow with trigger
+    const updated = await this.workflowsService.findOne(id, userId);
+    return { data: updated, message: 'Workflow updated successfully' };
   }
 
   @Delete(':id')
@@ -118,7 +155,7 @@ export class WorkflowsController {
     const trigger = await this.triggersService.findByWorkflowIdSafe(id, userId);
 
     // Resume schedule trigger if exists
-    if (trigger && trigger.type === 'SCHEDULE') {
+    if (trigger && trigger.type === TriggerType.SCHEDULE) {
       await this.scheduleTriggerService.resumeSchedule(trigger.id);
     }
 
@@ -139,7 +176,7 @@ export class WorkflowsController {
     const trigger = await this.triggersService.findByWorkflowIdSafe(id, userId);
 
     // Pause schedule trigger if exists
-    if (trigger && trigger.type === 'SCHEDULE') {
+    if (trigger && trigger.type === TriggerType.SCHEDULE) {
       await this.scheduleTriggerService.pauseSchedule(trigger.id);
     }
 

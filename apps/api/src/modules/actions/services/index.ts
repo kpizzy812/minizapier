@@ -3,3 +3,4 @@ export { TransformAction } from './transform.action';
 export { SendEmailAction } from './send-email.action';
 export { SendTelegramAction } from './send-telegram.action';
 export { DatabaseQueryAction } from './database-query.action';
+export { AIRequestAction } from './ai-request.action';

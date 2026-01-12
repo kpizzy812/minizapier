@@ -3,6 +3,7 @@
 import Link from 'next/link';
 import { ArrowLeft, User, Mail, Calendar } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { ThemeToggle } from '@/components/ui/theme-toggle';
 import { useAuth } from '@/components/auth/auth-provider';
 
 export default function ProfilePage() {
@@ -23,13 +24,14 @@ export default function ProfilePage() {
   return (
     <div className="min-h-screen bg-background">
       <header className="border-b">
-        <div className="container mx-auto flex h-16 items-center px-4">
+        <div className="container mx-auto flex h-16 items-center justify-between px-4">
           <Button variant="ghost" size="sm" asChild>
             <Link href="/">
               <ArrowLeft className="mr-2 h-4 w-4" />
               Back to Dashboard
             </Link>
           </Button>
+          <ThemeToggle />
         </div>
       </header>
 

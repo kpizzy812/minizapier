@@ -15,11 +15,16 @@ import { NotFoundException } from '@nestjs/common';
 import { WorkflowsController } from './workflows.controller';
 import { WorkflowsService } from './workflows.service';
 import { ExecutionsService } from '../executions/executions.service';
+import { TriggersService } from '../triggers/triggers.service';
+import { ScheduleTriggerService } from '../triggers/services';
+import { TriggerType } from '../triggers/dto/triggers.dto';
 
 describe('WorkflowsController', () => {
   let controller: WorkflowsController;
   let workflowsService: jest.Mocked<WorkflowsService>;
   let executionsService: jest.Mocked<ExecutionsService>;
+  let triggersService: jest.Mocked<TriggersService>;
+  let scheduleTriggerService: jest.Mocked<ScheduleTriggerService>;
 
   const mockWorkflow = {
     id: 'wf-123',
@@ -60,17 +65,33 @@ describe('WorkflowsController', () => {
       create: jest.fn(),
     };
 
+    const mockTriggersService = {
+      findByWorkflowIdSafe: jest.fn(),
+    };
+
+    const mockScheduleTriggerService = {
+      resumeSchedule: jest.fn(),
+      pauseSchedule: jest.fn(),
+    };
+
     const module: TestingModule = await Test.createTestingModule({
       controllers: [WorkflowsController],
       providers: [
         { provide: WorkflowsService, useValue: mockWorkflowsService },
         { provide: ExecutionsService, useValue: mockExecutionsService },
+        { provide: TriggersService, useValue: mockTriggersService },
+        {
+          provide: ScheduleTriggerService,
+          useValue: mockScheduleTriggerService,
+        },
       ],
     }).compile();
 
     controller = module.get<WorkflowsController>(WorkflowsController);
     workflowsService = module.get(WorkflowsService);
     executionsService = module.get(ExecutionsService);
+    triggersService = module.get(TriggersService);
+    scheduleTriggerService = module.get(ScheduleTriggerService);
   });
 
   it('should be defined', () => {
@@ -81,14 +102,11 @@ describe('WorkflowsController', () => {
     it('should create a workflow', async () => {
       workflowsService.create.mockResolvedValue(mockWorkflow);
 
-      const result = await controller.create(
-        { 'x-user-id': 'user-123' },
-        {
-          name: 'Test Workflow',
-          description: 'Test description',
-          definition: { nodes: [], edges: [] },
-        },
-      );
+      const result = await controller.create('user-123', {
+        name: 'Test Workflow',
+        description: 'Test description',
+        definition: { nodes: [], edges: [] },
+      });
 
       expect(result).toEqual({
         data: mockWorkflow,
@@ -100,23 +118,6 @@ describe('WorkflowsController', () => {
         definition: { nodes: [], edges: [] },
       });
     });
-
-    it('should use temp-user-id when x-user-id not provided', async () => {
-      workflowsService.create.mockResolvedValue(mockWorkflow);
-
-      await controller.create(
-        {},
-        {
-          name: 'Test',
-          definition: { nodes: [], edges: [] },
-        },
-      );
-
-      expect(workflowsService.create).toHaveBeenCalledWith(
-        'temp-user-id',
-        expect.any(Object),
-      );
-    });
   });
 
   describe('findAll', () => {
@@ -126,7 +127,7 @@ describe('WorkflowsController', () => {
         total: 1,
       });
 
-      const result = await controller.findAll({ 'x-user-id': 'user-123' });
+      const result = await controller.findAll('user-123');
 
       expect(result).toEqual({ data: [mockWorkflow], total: 1 });
       expect(workflowsService.findAll).toHaveBeenCalledWith('user-123', {
@@ -141,11 +142,7 @@ describe('WorkflowsController', () => {
         total: 10,
       });
 
-      const result = await controller.findAll(
-        { 'x-user-id': 'user-123' },
-        '5',
-        '10',
-      );
+      const result = await controller.findAll('user-123', '5', '10');
 
       expect(result).toEqual({ data: [mockWorkflow], total: 10 });
       expect(workflowsService.findAll).toHaveBeenCalledWith('user-123', {
@@ -160,7 +157,7 @@ describe('WorkflowsController', () => {
         total: 0,
       });
 
-      const result = await controller.findAll({ 'x-user-id': 'user-123' });
+      const result = await controller.findAll('user-123');
 
       expect(result).toEqual({ data: [], total: 0 });
     });
@@ -170,10 +167,7 @@ describe('WorkflowsController', () => {
     it('should return a workflow by id', async () => {
       workflowsService.findOne.mockResolvedValue(mockWorkflow);
 
-      const result = await controller.findOne(
-        { 'x-user-id': 'user-123' },
-        'wf-123',
-      );
+      const result = await controller.findOne('user-123', 'wf-123');
 
       expect(result).toEqual({ data: mockWorkflow });
       expect(workflowsService.findOne).toHaveBeenCalledWith(
@@ -187,9 +181,9 @@ describe('WorkflowsController', () => {
         new NotFoundException('Workflow not found'),
       );
 
-      await expect(
-        controller.findOne({ 'x-user-id': 'user-123' }, 'missing'),
-      ).rejects.toThrow(NotFoundException);
+      await expect(controller.findOne('user-123', 'missing')).rejects.toThrow(
+        NotFoundException,
+      );
     });
   });
 
@@ -201,11 +195,9 @@ describe('WorkflowsController', () => {
       };
       workflowsService.update.mockResolvedValue(updatedWorkflow);
 
-      const result = await controller.update(
-        { 'x-user-id': 'user-123' },
-        'wf-123',
-        { name: 'Updated Name' },
-      );
+      const result = await controller.update('user-123', 'wf-123', {
+        name: 'Updated Name',
+      });
 
       expect(result).toEqual({
         data: updatedWorkflow,
@@ -226,7 +218,7 @@ describe('WorkflowsController', () => {
       );
 
       await expect(
-        controller.update({ 'x-user-id': 'user-123' }, 'missing', {
+        controller.update('user-123', 'missing', {
           name: 'New',
         }),
       ).rejects.toThrow(NotFoundException);
@@ -237,10 +229,7 @@ describe('WorkflowsController', () => {
     it('should delete a workflow', async () => {
       workflowsService.remove.mockResolvedValue(mockWorkflow);
 
-      const result = await controller.remove(
-        { 'x-user-id': 'user-123' },
-        'wf-123',
-      );
+      const result = await controller.remove('user-123', 'wf-123');
 
       expect(result).toEqual({ message: 'Workflow deleted successfully' });
       expect(workflowsService.remove).toHaveBeenCalledWith(
@@ -254,9 +243,9 @@ describe('WorkflowsController', () => {
         new NotFoundException('Workflow not found'),
       );
 
-      await expect(
-        controller.remove({ 'x-user-id': 'user-123' }, 'missing'),
-      ).rejects.toThrow(NotFoundException);
+      await expect(controller.remove('user-123', 'missing')).rejects.toThrow(
+        NotFoundException,
+      );
     });
   });
 
@@ -269,10 +258,7 @@ describe('WorkflowsController', () => {
       };
       workflowsService.duplicate.mockResolvedValue(duplicatedWorkflow);
 
-      const result = await controller.duplicate(
-        { 'x-user-id': 'user-123' },
-        'wf-123',
-      );
+      const result = await controller.duplicate('user-123', 'wf-123');
 
       expect(result).toEqual({
         data: duplicatedWorkflow,
@@ -289,26 +275,34 @@ describe('WorkflowsController', () => {
         new NotFoundException('Workflow not found'),
       );
 
-      await expect(
-        controller.duplicate({ 'x-user-id': 'user-123' }, 'missing'),
-      ).rejects.toThrow(NotFoundException);
+      await expect(controller.duplicate('user-123', 'missing')).rejects.toThrow(
+        NotFoundException,
+      );
     });
   });
 
   describe('activate', () => {
-    it('should activate a workflow', async () => {
+    it('should activate a workflow without schedule trigger', async () => {
       const activatedWorkflow = { ...mockWorkflow, isActive: true };
+      workflowsService.findOne.mockResolvedValue(mockWorkflow);
+      triggersService.findByWorkflowIdSafe.mockResolvedValue(null);
       workflowsService.setActive.mockResolvedValue(activatedWorkflow);
 
-      const result = await controller.activate(
-        { 'x-user-id': 'user-123' },
-        'wf-123',
-      );
+      const result = await controller.activate('user-123', 'wf-123');
 
       expect(result).toEqual({
         data: activatedWorkflow,
         message: 'Workflow activated',
       });
+      expect(workflowsService.findOne).toHaveBeenCalledWith(
+        'wf-123',
+        'user-123',
+      );
+      expect(triggersService.findByWorkflowIdSafe).toHaveBeenCalledWith(
+        'wf-123',
+        'user-123',
+      );
+      expect(scheduleTriggerService.resumeSchedule).not.toHaveBeenCalled();
       expect(workflowsService.setActive).toHaveBeenCalledWith(
         'wf-123',
         'user-123',
@@ -316,35 +310,81 @@ describe('WorkflowsController', () => {
       );
     });
 
+    it('should activate a workflow with schedule trigger', async () => {
+      const activatedWorkflow = { ...mockWorkflow, isActive: true };
+      const mockTrigger = { id: 'trigger-123', type: TriggerType.SCHEDULE };
+      workflowsService.findOne.mockResolvedValue(mockWorkflow);
+      triggersService.findByWorkflowIdSafe.mockResolvedValue(mockTrigger);
+      scheduleTriggerService.resumeSchedule.mockResolvedValue(true);
+      workflowsService.setActive.mockResolvedValue(activatedWorkflow);
+
+      const result = await controller.activate('user-123', 'wf-123');
+
+      expect(result).toEqual({
+        data: activatedWorkflow,
+        message: 'Workflow activated',
+      });
+      expect(scheduleTriggerService.resumeSchedule).toHaveBeenCalledWith(
+        'trigger-123',
+      );
+    });
+
     it('should throw when workflow not found', async () => {
-      workflowsService.setActive.mockRejectedValue(
+      workflowsService.findOne.mockRejectedValue(
         new NotFoundException('Workflow not found'),
       );
 
-      await expect(
-        controller.activate({ 'x-user-id': 'user-123' }, 'missing'),
-      ).rejects.toThrow(NotFoundException);
+      await expect(controller.activate('user-123', 'missing')).rejects.toThrow(
+        NotFoundException,
+      );
     });
   });
 
   describe('deactivate', () => {
-    it('should deactivate a workflow', async () => {
+    it('should deactivate a workflow without schedule trigger', async () => {
       const deactivatedWorkflow = { ...mockWorkflow, isActive: false };
+      workflowsService.findOne.mockResolvedValue(mockWorkflow);
+      triggersService.findByWorkflowIdSafe.mockResolvedValue(null);
       workflowsService.setActive.mockResolvedValue(deactivatedWorkflow);
 
-      const result = await controller.deactivate(
-        { 'x-user-id': 'user-123' },
-        'wf-123',
-      );
+      const result = await controller.deactivate('user-123', 'wf-123');
 
       expect(result).toEqual({
         data: deactivatedWorkflow,
         message: 'Workflow deactivated',
       });
+      expect(workflowsService.findOne).toHaveBeenCalledWith(
+        'wf-123',
+        'user-123',
+      );
+      expect(triggersService.findByWorkflowIdSafe).toHaveBeenCalledWith(
+        'wf-123',
+        'user-123',
+      );
+      expect(scheduleTriggerService.pauseSchedule).not.toHaveBeenCalled();
       expect(workflowsService.setActive).toHaveBeenCalledWith(
         'wf-123',
         'user-123',
         false,
+      );
+    });
+
+    it('should deactivate a workflow with schedule trigger', async () => {
+      const deactivatedWorkflow = { ...mockWorkflow, isActive: false };
+      const mockTrigger = { id: 'trigger-123', type: TriggerType.SCHEDULE };
+      workflowsService.findOne.mockResolvedValue(mockWorkflow);
+      triggersService.findByWorkflowIdSafe.mockResolvedValue(mockTrigger);
+      scheduleTriggerService.pauseSchedule.mockResolvedValue(true);
+      workflowsService.setActive.mockResolvedValue(deactivatedWorkflow);
+
+      const result = await controller.deactivate('user-123', 'wf-123');
+
+      expect(result).toEqual({
+        data: deactivatedWorkflow,
+        message: 'Workflow deactivated',
+      });
+      expect(scheduleTriggerService.pauseSchedule).toHaveBeenCalledWith(
+        'trigger-123',
       );
     });
   });
@@ -354,11 +394,9 @@ describe('WorkflowsController', () => {
       workflowsService.findOne.mockResolvedValue(mockWorkflow);
       executionsService.create.mockResolvedValue(mockExecution);
 
-      const result = await controller.test(
-        { 'x-user-id': 'user-123' },
-        'wf-123',
-        { testData: { foo: 'bar' } },
-      );
+      const result = await controller.test('user-123', 'wf-123', {
+        testData: { foo: 'bar' },
+      });
 
       expect(result).toEqual({
         data: mockExecution,
@@ -379,7 +417,7 @@ describe('WorkflowsController', () => {
       workflowsService.findOne.mockResolvedValue(mockWorkflow);
       executionsService.create.mockResolvedValue(mockExecution);
 
-      await controller.test({ 'x-user-id': 'user-123' }, 'wf-123');
+      await controller.test('user-123', 'wf-123');
 
       expect(executionsService.create).toHaveBeenCalledWith(
         'wf-123',
@@ -393,9 +431,9 @@ describe('WorkflowsController', () => {
         new NotFoundException('Workflow not found'),
       );
 
-      await expect(
-        controller.test({ 'x-user-id': 'user-123' }, 'missing'),
-      ).rejects.toThrow(NotFoundException);
+      await expect(controller.test('user-123', 'missing')).rejects.toThrow(
+        NotFoundException,
+      );
     });
   });
 });

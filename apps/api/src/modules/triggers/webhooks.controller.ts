@@ -22,6 +22,7 @@ import {
   ApiQuery,
   ApiExcludeEndpoint,
 } from '@nestjs/swagger';
+import { SkipThrottle } from '@nestjs/throttler';
 import type { Request } from 'express';
 import { TriggersService } from './triggers.service';
 import { WebhookTriggerService } from './services/webhook-trigger.service';
@@ -32,8 +33,10 @@ import { Public } from '../auth';
 /**
  * Public webhook controller for receiving external triggers.
  * No authentication required - uses token-based security.
+ * Rate limiting is skipped - webhooks have their own signature verification.
  */
 @Public()
+@SkipThrottle()
 @ApiTags('webhooks')
 @Controller('webhooks')
 export class WebhooksController {
@@ -46,93 +49,8 @@ export class WebhooksController {
     private readonly executionsService: ExecutionsService,
   ) {}
 
-  @Post(':token')
-  @HttpCode(HttpStatus.OK)
-  @ApiOperation({
-    summary: 'Receive webhook trigger',
-    description:
-      'Public endpoint for receiving webhook payloads. Triggers workflow execution.',
-  })
-  @ApiParam({ name: 'token', description: 'Webhook token' })
-  @ApiResponse({ status: 200, description: 'Webhook received and processed' })
-  @ApiResponse({ status: 400, description: 'Invalid signature' })
-  @ApiResponse({ status: 404, description: 'Webhook not found' })
-  @ApiResponse({ status: 403, description: 'Workflow is not active' })
-  async receiveWebhook(
-    @Param('token') token: string,
-    @Body() body: unknown,
-    @Headers() headers: Record<string, string>,
-    @Query() query: Record<string, string>,
-    @Req() req: RawBodyRequest<Request>,
-  ) {
-    this.logger.log(`Received webhook: ${token}`);
-
-    // Find trigger by token
-    const result = await this.triggersService.findByWebhookToken(token);
-
-    if (!result) {
-      throw new NotFoundException('Webhook not found');
-    }
-
-    const { trigger, workflow } = result;
-
-    // Check if workflow is active
-    if (!workflow.isActive) {
-      throw new ForbiddenException('Workflow is not active');
-    }
-
-    // Verify signature if secret is configured
-    const config = trigger.config as { secret?: string };
-    if (config.secret) {
-      const signature =
-        headers['x-webhook-signature'] || headers['x-hub-signature-256'];
-      if (!signature) {
-        this.logger.warn(`Missing signature for webhook ${token}`);
-        throw new BadRequestException('Missing webhook signature');
-      }
-
-      // Get raw body for signature verification
-      const rawBody = req.rawBody
-        ? req.rawBody.toString('utf8')
-        : JSON.stringify(body);
-
-      const isValid = this.webhookTrigger.verifySignature(
-        rawBody,
-        signature,
-        config.secret,
-      );
-
-      if (!isValid) {
-        this.logger.warn(`Invalid signature for webhook ${token}`);
-        throw new BadRequestException('Invalid webhook signature');
-      }
-    }
-
-    // Build trigger data
-    const triggerData = this.webhookTrigger.buildTriggerData(
-      body,
-      headers,
-      query,
-      req.method,
-    );
-
-    // Create execution
-    const execution = await this.executionsService.create(
-      workflow.id,
-      workflow.userId,
-      triggerData,
-    );
-
-    this.logger.log(
-      `Webhook ${token} triggered execution ${execution.id} for workflow ${workflow.id}`,
-    );
-
-    return {
-      success: true,
-      executionId: execution.id,
-      message: 'Webhook received successfully',
-    };
-  }
+  // IMPORTANT: Static routes must be defined BEFORE parameterized routes
+  // Otherwise :token will capture 'email' and 'test' as token values
 
   @Post('email')
   @HttpCode(HttpStatus.OK)
@@ -281,6 +199,95 @@ export class WebhooksController {
         query,
         body,
       },
+    };
+  }
+
+  // Parameterized route MUST be last - otherwise it captures static paths like 'email'
+  @Post(':token')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({
+    summary: 'Receive webhook trigger',
+    description:
+      'Public endpoint for receiving webhook payloads. Triggers workflow execution.',
+  })
+  @ApiParam({ name: 'token', description: 'Webhook token' })
+  @ApiResponse({ status: 200, description: 'Webhook received and processed' })
+  @ApiResponse({ status: 400, description: 'Invalid signature' })
+  @ApiResponse({ status: 404, description: 'Webhook not found' })
+  @ApiResponse({ status: 403, description: 'Workflow is not active' })
+  async receiveWebhook(
+    @Param('token') token: string,
+    @Body() body: unknown,
+    @Headers() headers: Record<string, string>,
+    @Query() query: Record<string, string>,
+    @Req() req: RawBodyRequest<Request>,
+  ) {
+    this.logger.log(`Received webhook: ${token}`);
+
+    // Find trigger by token
+    const result = await this.triggersService.findByWebhookToken(token);
+
+    if (!result) {
+      throw new NotFoundException('Webhook not found');
+    }
+
+    const { trigger, workflow } = result;
+
+    // Check if workflow is active
+    if (!workflow.isActive) {
+      throw new ForbiddenException('Workflow is not active');
+    }
+
+    // Verify signature if secret is configured
+    const config = trigger.config as { secret?: string };
+    if (config.secret) {
+      const signature =
+        headers['x-webhook-signature'] || headers['x-hub-signature-256'];
+      if (!signature) {
+        this.logger.warn(`Missing signature for webhook ${token}`);
+        throw new BadRequestException('Missing webhook signature');
+      }
+
+      // Get raw body for signature verification
+      const rawBody = req.rawBody
+        ? req.rawBody.toString('utf8')
+        : JSON.stringify(body);
+
+      const isValid = this.webhookTrigger.verifySignature(
+        rawBody,
+        signature,
+        config.secret,
+      );
+
+      if (!isValid) {
+        this.logger.warn(`Invalid signature for webhook ${token}`);
+        throw new BadRequestException('Invalid webhook signature');
+      }
+    }
+
+    // Build trigger data
+    const triggerData = this.webhookTrigger.buildTriggerData(
+      body,
+      headers,
+      query,
+      req.method,
+    );
+
+    // Create execution
+    const execution = await this.executionsService.create(
+      workflow.id,
+      workflow.userId,
+      triggerData,
+    );
+
+    this.logger.log(
+      `Webhook ${token} triggered execution ${execution.id} for workflow ${workflow.id}`,
+    );
+
+    return {
+      success: true,
+      executionId: execution.id,
+      message: 'Webhook received successfully',
     };
   }
 }

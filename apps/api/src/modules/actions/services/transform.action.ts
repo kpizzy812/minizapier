@@ -37,17 +37,26 @@ export class TransformAction {
     });
 
     // Add safe utility functions
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
     this.parser.functions.length = (arr: unknown[]) =>
       Array.isArray(arr) ? arr.length : 0;
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
     this.parser.functions.toLowerCase = (s: string) =>
       typeof s === 'string' ? s.toLowerCase() : '';
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
     this.parser.functions.toUpperCase = (s: string) =>
       typeof s === 'string' ? s.toUpperCase() : '';
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
     this.parser.functions.trim = (s: string) =>
       typeof s === 'string' ? s.trim() : '';
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
     this.parser.functions.toString = (v: unknown) => String(v);
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
     this.parser.functions.toNumber = (v: unknown) => Number(v) || 0;
-    this.parser.functions.isNull = (v: unknown) => v === null || v === undefined;
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
+    this.parser.functions.isNull = (v: unknown) =>
+      v === null || v === undefined;
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
     this.parser.functions.coalesce = (...args: unknown[]) =>
       args.find((a) => a !== null && a !== undefined);
   }
@@ -147,7 +156,7 @@ export class TransformAction {
     try {
       const parsed = this.parser.parse(expression);
       // expr-eval expects a simple object with primitive values
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+
       return parsed.evaluate(flatContext as any);
     } catch (error) {
       // If expression parsing fails, try to return it as a literal

@@ -1,8 +1,12 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { HttpRequestConfig, HttpRequestResult } from '../types';
+import { validateUrlForSsrf } from '../../../common/utils';
 
 /**
  * HTTP Request Action - makes HTTP requests to external APIs
+ *
+ * Security: Includes SSRF protection to prevent requests to internal networks,
+ * localhost, and cloud metadata endpoints.
  */
 @Injectable()
 export class HttpRequestAction {
@@ -17,6 +21,16 @@ export class HttpRequestAction {
 
     try {
       const { method, url, headers = {}, body, timeout, auth } = config;
+
+      // SSRF Protection: Validate URL before making request
+      const urlValidation = validateUrlForSsrf(url);
+      if (!urlValidation.isValid) {
+        this.logger.warn(`SSRF protection blocked request to: ${url}`);
+        return {
+          success: false,
+          error: urlValidation.error || 'URL validation failed',
+        };
+      }
 
       // Build headers with auth
       const requestHeaders = new Headers(headers);

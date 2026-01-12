@@ -2,6 +2,7 @@
 
 import { X, Trash2, MousePointerClick } from 'lucide-react';
 import { useWorkflowStore, type NodeType } from '@/stores/workflow-store';
+import { useNodeDataSources } from '@/hooks/use-node-data-sources';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Separator } from '@/components/ui/separator';
@@ -15,6 +16,7 @@ import {
   DatabaseQueryForm,
   TransformForm,
   ConditionForm,
+  AIRequestForm,
 } from './forms';
 
 // Node type display names for header
@@ -28,6 +30,7 @@ const nodeTypeNames: Record<NodeType, string> = {
   databaseQuery: 'Database Query',
   transform: 'Transform Data',
   condition: 'Condition',
+  aiRequest: 'AI Request',
 };
 
 // Color classes for node types
@@ -41,6 +44,7 @@ const nodeTypeColors: Record<NodeType, string> = {
   databaseQuery: 'bg-blue-500',
   transform: 'bg-blue-500',
   condition: 'bg-amber-500',
+  aiRequest: 'bg-violet-500',
 };
 
 export function NodePropertiesPanel() {
@@ -48,6 +52,7 @@ export function NodePropertiesPanel() {
     useWorkflowStore();
 
   const selectedNode = nodes.find((n) => n.id === selectedNodeId);
+  const dataSources = useNodeDataSources(selectedNodeId);
 
   // Handle field update
   const handleUpdate = (data: Record<string, unknown>) => {
@@ -91,9 +96,11 @@ export function NodePropertiesPanel() {
       case 'databaseQuery':
         return <DatabaseQueryForm data={data} onUpdate={handleUpdate} />;
       case 'transform':
-        return <TransformForm data={data} onUpdate={handleUpdate} />;
+        return <TransformForm data={data} onUpdate={handleUpdate} dataSources={dataSources} />;
       case 'condition':
-        return <ConditionForm data={data} onUpdate={handleUpdate} />;
+        return <ConditionForm data={data} onUpdate={handleUpdate} dataSources={dataSources} />;
+      case 'aiRequest':
+        return <AIRequestForm nodeId={selectedNode.id} data={data} onUpdate={handleUpdate} dataSources={dataSources} />;
       default:
         return null;
     }

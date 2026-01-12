@@ -38,6 +38,7 @@ enum CredentialType {
   HTTP_API_KEY
   DATABASE
   RESEND
+  AI // OpenAI-compatible API (DeepSeek, OpenAI, etc.)
 }
 
 model Credential {
@@ -95,17 +96,18 @@ model Execution {
 
 // Step execution log
 model StepLog {
-  id          String    @id @default(cuid())
-  executionId String
-  execution   Execution @relation(fields: [executionId], references: [id], onDelete: Cascade)
-  nodeId      String    // Node ID from React Flow
-  nodeName    String    // Display name
-  status      String    // pending, running, success, error, skipped
-  input       Json?
-  output      Json?
-  error       String?
-  duration    Int?      // Duration in ms
-  createdAt   DateTime  @default(now())
+  id            String    @id @default(cuid())
+  executionId   String
+  execution     Execution @relation(fields: [executionId], references: [id], onDelete: Cascade)
+  nodeId        String    // Node ID from React Flow
+  nodeName      String    // Display name
+  status        String    // pending, running, success, error, skipped
+  input         Json?
+  output        Json?
+  error         String?
+  duration      Int?      // Duration in ms
+  retryAttempts Int?      // Number of retry attempts (0 = first attempt succeeded)
+  createdAt     DateTime  @default(now())
 
   @@index([executionId, createdAt])
 }

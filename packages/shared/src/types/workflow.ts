@@ -9,16 +9,33 @@ export type NodeType =
   | 'sendTelegram'
   | 'databaseQuery'
   | 'transform'
-  | 'condition';
+  | 'condition'
+  | 'aiRequest';
 
 export interface Position {
   x: number;
   y: number;
 }
 
+/**
+ * Configuration for step retry behavior
+ */
+export interface RetryConfig {
+  /** Maximum number of retry attempts (default: 0 = no retry) */
+  maxAttempts?: number;
+  /** Initial delay in milliseconds before first retry (default: 1000) */
+  initialDelayMs?: number;
+  /** Backoff multiplier for exponential backoff (default: 2) */
+  backoffMultiplier?: number;
+  /** Maximum delay between retries in milliseconds (default: 30000) */
+  maxDelayMs?: number;
+}
+
 export interface BaseNodeData {
   label: string;
   description?: string;
+  /** Optional retry configuration for this step */
+  retryConfig?: RetryConfig;
 }
 
 // Trigger node data types
@@ -75,6 +92,32 @@ export interface TransformData extends BaseNodeData {
   expression: string; // JSONPath or JS expression
 }
 
+/**
+ * Schema field definition for AI structured output
+ */
+export interface SchemaField {
+  name: string;
+  type: 'string' | 'number' | 'boolean' | 'array' | 'object';
+  description?: string;
+  required?: boolean;
+  items?: SchemaField;
+  properties?: SchemaField[];
+}
+
+export interface AIRequestData extends BaseNodeData {
+  type: 'aiRequest';
+  prompt: string;
+  systemPrompt?: string;
+  outputSchema?: {
+    name: string;
+    description?: string;
+    fields: SchemaField[];
+  };
+  temperature?: number;
+  maxTokens?: number;
+  credentialId?: string;
+}
+
 export interface ConditionData extends BaseNodeData {
   type: 'condition';
   expression: string; // e.g., "{{trigger.body.status}} === 200"
@@ -90,7 +133,8 @@ export type ActionNodeData =
   | SendEmailData
   | SendTelegramData
   | DatabaseQueryData
-  | TransformData;
+  | TransformData
+  | AIRequestData;
 
 export type LogicNodeData = ConditionData;
 
