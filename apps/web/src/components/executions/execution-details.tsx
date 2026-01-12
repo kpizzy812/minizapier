@@ -49,6 +49,39 @@ function StepStatusIcon({ status }: { status: string }) {
   }
 }
 
+function CollapsibleSection({
+  title,
+  children,
+  defaultOpen = true
+}: {
+  title: string;
+  children: React.ReactNode;
+  defaultOpen?: boolean;
+}) {
+  const [isOpen, setIsOpen] = useState(defaultOpen);
+
+  return (
+    <div className="border rounded-lg">
+      <button
+        className="w-full flex items-center justify-between p-3 hover:bg-muted/50 transition-colors"
+        onClick={() => setIsOpen(!isOpen)}
+      >
+        <div className="text-sm font-medium">{title}</div>
+        {isOpen ? (
+          <ChevronDown className="h-4 w-4" />
+        ) : (
+          <ChevronRight className="h-4 w-4" />
+        )}
+      </button>
+      {isOpen && (
+        <div className="border-t p-3 bg-muted/30">
+          {children}
+        </div>
+      )}
+    </div>
+  );
+}
+
 function StepItem({ step }: { step: StepLog }) {
   const [isExpanded, setIsExpanded] = useState(false);
 
@@ -248,16 +281,15 @@ export function ExecutionDetails({ executionId, onClose }: ExecutionDetailsProps
                 )}
               </div>
 
-              {/* Input */}
+              {/* Input - collapsible */}
               {execution.input !== undefined && execution.input !== null ? (
-                <div>
-                  <div className="text-sm font-medium mb-2">Trigger Input</div>
+                <CollapsibleSection title="Trigger Input" defaultOpen={false}>
                   <ScrollArea className="max-h-48 rounded-lg border">
                     <pre className="text-xs bg-muted p-3 whitespace-pre-wrap break-all">
                       {JSON.stringify(execution.input, null, 2)}
                     </pre>
                   </ScrollArea>
-                </div>
+                </CollapsibleSection>
               ) : null}
 
               {/* Steps */}
@@ -278,16 +310,15 @@ export function ExecutionDetails({ executionId, onClose }: ExecutionDetailsProps
                 </div>
               </div>
 
-              {/* Output */}
+              {/* Output - collapsible */}
               {execution.output !== undefined && execution.output !== null ? (
-                <div>
-                  <div className="text-sm font-medium mb-2">Final Output</div>
+                <CollapsibleSection title="Final Output" defaultOpen={false}>
                   <ScrollArea className="max-h-48 rounded-lg border">
                     <pre className="text-xs bg-muted p-3 whitespace-pre-wrap break-all">
                       {JSON.stringify(execution.output, null, 2)}
                     </pre>
                   </ScrollArea>
-                </div>
+                </CollapsibleSection>
               ) : null}
             </div>
           </ScrollArea>
