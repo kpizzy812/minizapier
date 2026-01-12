@@ -197,9 +197,9 @@ export function WorkflowList() {
                 <Badge variant={workflow.isActive ? 'default' : 'secondary'}>
                   {workflow.isActive ? 'Active' : 'Inactive'}
                 </Badge>
-                <span>v{workflow.version}</span>
+                <span className="leading-none">v{workflow.version}</span>
               </div>
-              <span>
+              <span className="leading-none">
                 {formatDistanceToNow(new Date(workflow.updatedAt), {
                   addSuffix: true,
                 })}
