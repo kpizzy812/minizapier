@@ -171,6 +171,17 @@ export class ExecutionsService {
   }
 
   /**
+   * Get step logs for an execution (internal use, no auth check).
+   * Used by WebSocket gateway to send current status on connect.
+   */
+  async getStepLogsInternal(executionId: string) {
+    return this.prisma.stepLog.findMany({
+      where: { executionId },
+      orderBy: { createdAt: 'asc' },
+    });
+  }
+
+  /**
    * Replay an execution from the beginning
    */
   async replay(executionId: string, userId: string): Promise<Execution> {

@@ -73,6 +73,7 @@ function FieldEditor({
         depth > 0 && 'ml-4 border-dashed'
       )}
     >
+      {/* Row 1: Name input */}
       <div className="flex items-center gap-2">
         {/* Expand/collapse for complex types */}
         {(field.type === 'array' || field.type === 'object') && (
@@ -96,6 +97,19 @@ function FieldEditor({
           className="flex-1 h-8 text-sm font-mono"
         />
 
+        <Button
+          type="button"
+          variant="ghost"
+          size="icon"
+          className="h-8 w-8 shrink-0 text-destructive hover:text-destructive"
+          onClick={onRemove}
+        >
+          <Trash2 className="h-4 w-4" />
+        </Button>
+      </div>
+
+      {/* Row 2: Type, Required */}
+      <div className="flex items-center gap-2">
         <Select
           value={field.type}
           onValueChange={(v) => {
@@ -128,20 +142,11 @@ function FieldEditor({
             onCheckedChange={(v) => onChange({ ...field, required: v })}
             className="scale-75"
           />
-          <span className="text-xs text-muted-foreground">Req</span>
+          <span className="text-xs text-muted-foreground">Required</span>
         </div>
-
-        <Button
-          type="button"
-          variant="ghost"
-          size="icon"
-          className="h-8 w-8 text-destructive hover:text-destructive"
-          onClick={onRemove}
-        >
-          <Trash2 className="h-4 w-4" />
-        </Button>
       </div>
 
+      {/* Row 3: Description */}
       <Input
         value={field.description || ''}
         onChange={(e) => onChange({ ...field, description: e.target.value })}
@@ -363,9 +368,9 @@ export function SchemaBuilder({ schema, onChange }: SchemaBuilderProps) {
 
       {/* JSON Schema Preview */}
       {showPreview && schema && (
-        <div className="border rounded-lg p-3 bg-muted/30">
-          <div className="text-xs font-medium mb-2">JSON Schema Preview</div>
-          <pre className="text-xs overflow-x-auto whitespace-pre-wrap">
+        <div className="border rounded-lg p-3 bg-muted/30 max-h-64 overflow-y-auto">
+          <div className="text-xs font-medium mb-2 sticky top-0 bg-muted/30">JSON Schema Preview</div>
+          <pre className="text-xs overflow-x-auto whitespace-pre-wrap font-mono">
             {JSON.stringify(buildJsonSchema(), null, 2)}
           </pre>
         </div>

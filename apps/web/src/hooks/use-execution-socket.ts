@@ -123,38 +123,33 @@ export function useExecutionSocket(executionId: string | null) {
     socketRef.current = socket;
 
     socket.on('connect', () => {
-      console.log('[WS] Connected to execution socket');
       // Join execution room
       socket.emit(EXECUTION_EVENTS.JOIN_EXECUTION, { executionId });
       setCurrentExecution(executionId);
     });
 
     socket.on('disconnect', () => {
-      console.log('[WS] Disconnected from execution socket');
+      // Handle disconnect
     });
 
     // Handle execution start
     socket.on(EXECUTION_EVENTS.EXECUTION_START, () => {
-      console.log('[WS] Execution started');
       clearNodeStatuses();
       setIsExecuting(true);
     });
 
     // Handle step start
     socket.on(EXECUTION_EVENTS.STEP_START, (data: StepEvent) => {
-      console.log('[WS] Step started:', data.nodeId);
       setNodeStatus(data.nodeId, 'running');
     });
 
     // Handle step complete
     socket.on(EXECUTION_EVENTS.STEP_COMPLETE, (data: StepEvent) => {
-      console.log('[WS] Step complete:', data.nodeId, data.status);
       setNodeStatus(data.nodeId, data.status);
     });
 
     // Handle execution complete
-    socket.on(EXECUTION_EVENTS.EXECUTION_COMPLETE, (data: ExecutionEvent) => {
-      console.log('[WS] Execution complete:', data.status);
+    socket.on(EXECUTION_EVENTS.EXECUTION_COMPLETE, (_data: ExecutionEvent) => {
       setIsExecuting(false);
     });
 

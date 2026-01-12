@@ -11,6 +11,7 @@ import {
 import { Logger } from '@nestjs/common';
 import { Server, Socket } from 'socket.io';
 import { ExecutionEventsService } from './execution-events.service';
+import { ExecutionsService } from './executions.service';
 import { EXECUTION_EVENTS } from './dto/execution-events.dto';
 
 /**
@@ -34,7 +35,10 @@ export class ExecutionGateway
   @WebSocketServer()
   server: Server;
 
-  constructor(private readonly executionEventsService: ExecutionEventsService) {}
+  constructor(
+    private readonly executionEventsService: ExecutionEventsService,
+    private readonly executionsService: ExecutionsService,
+  ) {}
 
   /**
    * Called after gateway is initialized
@@ -59,19 +63,56 @@ export class ExecutionGateway
   }
 
   /**
-   * Handle client joining an execution room
+   * Handle client joining an execution room.
+   * Sends current step statuses to handle race condition where
+   * steps complete before client connects.
    */
   @SubscribeMessage(EXECUTION_EVENTS.JOIN_EXECUTION)
-  handleJoinExecution(
+  async handleJoinExecution(
     @MessageBody() data: { executionId: string },
     @ConnectedSocket() client: Socket,
-  ): { success: boolean; room: string } {
+  ): Promise<{ success: boolean; room: string }> {
     const room = `execution:${data.executionId}`;
     client.join(room);
 
-    this.logger.debug(
-      `Client ${client.id} joined room ${room}`,
-    );
+    this.logger.debug(`Client ${client.id} joined room ${room}`);
+
+    // Send current step statuses to handle race condition
+    try {
+      const stepLogs = await this.executionsService.getStepLogsInternal(
+        data.executionId,
+      );
+
+      // Send step:complete events for already completed steps
+      for (const step of stepLogs) {
+        if (step.status === 'success' || step.status === 'error' || step.status === 'skipped') {
+          client.emit(EXECUTION_EVENTS.STEP_COMPLETE, {
+            executionId: data.executionId,
+            nodeId: step.nodeId,
+            nodeName: step.nodeName,
+            status: step.status,
+            output: step.output,
+            error: step.error,
+            duration: step.duration,
+          });
+        } else if (step.status === 'running') {
+          // Step is still running
+          client.emit(EXECUTION_EVENTS.STEP_START, {
+            executionId: data.executionId,
+            nodeId: step.nodeId,
+            nodeName: step.nodeName,
+          });
+        }
+      }
+
+      this.logger.debug(
+        `Sent ${stepLogs.length} existing step statuses to client ${client.id}`,
+      );
+    } catch (error) {
+      this.logger.warn(
+        `Failed to get step logs for execution ${data.executionId}: ${error}`,
+      );
+    }
 
     return { success: true, room };
   }

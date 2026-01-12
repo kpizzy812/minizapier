@@ -149,8 +149,8 @@ export function NodePropertiesPanel() {
       </div>
 
       {/* Form content */}
-      <ScrollArea className="flex-1">
-        <div className="p-4">{renderForm()}</div>
+      <ScrollArea className="flex-1 h-0">
+        <div className="p-4 pb-8">{renderForm()}</div>
       </ScrollArea>
 
       {/* Footer with delete button */}
