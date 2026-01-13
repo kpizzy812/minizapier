@@ -130,7 +130,7 @@ export function WorkflowList() {
     <>
     <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
       {workflows.map((workflow) => (
-        <Card key={workflow.id} className="group relative">
+        <Card key={workflow.id} className="group relative flex flex-col">
           <Link href={`/editor/${workflow.id}`} className="absolute inset-0 z-0" />
 
           <CardHeader className="pb-2">
@@ -191,7 +191,7 @@ export function WorkflowList() {
             </div>
           </CardHeader>
 
-          <CardContent>
+          <CardContent className="mt-auto">
             <div className="flex items-center justify-between text-sm text-muted-foreground">
               <div className="flex items-center gap-2">
                 <Badge variant={workflow.isActive ? 'default' : 'secondary'}>

@@ -102,7 +102,8 @@ export class WorkflowsService {
       updateData.isActive = dto.isActive;
     }
     if (dto.notificationEmail !== undefined) {
-      updateData.notificationEmail = dto.notificationEmail;
+      // Convert empty string to null for clearing the notification email
+      updateData.notificationEmail = dto.notificationEmail || null;
     }
 
     return this.prisma.workflow.update({

@@ -36,6 +36,7 @@ export interface Workflow {
   sampleData?: Record<string, unknown>;
   isActive: boolean;
   version: number;
+  notificationEmail?: string;
   createdAt: string;
   updatedAt: string;
 }
@@ -51,6 +52,7 @@ export interface UpdateWorkflowInput {
   description?: string;
   definition?: WorkflowDefinition;
   isActive?: boolean;
+  notificationEmail?: string | null;
 }
 
 // Execution types

@@ -5,6 +5,7 @@ import {
   IsObject,
   IsBoolean,
   IsEmail,
+  ValidateIf,
 } from 'class-validator';
 
 export class UpdateWorkflowDto {
@@ -45,9 +46,10 @@ export class UpdateWorkflowDto {
 
   @ApiPropertyOptional({
     example: 'user@example.com',
-    description: 'Email for error notifications',
+    description: 'Email for error notifications. Set to null or empty string to disable.',
   })
   @IsOptional()
+  @ValidateIf((o) => o.notificationEmail !== null && o.notificationEmail !== '')
   @IsEmail()
-  notificationEmail?: string;
+  notificationEmail?: string | null;
 }

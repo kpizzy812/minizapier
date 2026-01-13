@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
-import { Save, Play, Pause, ArrowLeft, AlertTriangle, Loader2, Undo2, Redo2, Power } from 'lucide-react';
+import { Save, Play, Pause, ArrowLeft, AlertTriangle, Loader2, Undo2, Redo2, Power, Settings } from 'lucide-react';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -11,6 +11,7 @@ import { ThemeToggle } from '@/components/ui/theme-toggle';
 import { useWorkflowStore } from '@/stores/workflow-store';
 import { useCreateWorkflow, useUpdateWorkflow, useTestWorkflow, useWorkflow, useToggleWorkflowActive } from '@/hooks/use-workflows';
 import { validateWorkflow, ValidationResult } from '@/lib/workflow-validator';
+import { WorkflowSettingsDialog } from './workflow-settings-dialog';
 
 interface WorkflowToolbarProps {
   workflowId?: string;
@@ -23,6 +24,7 @@ export function WorkflowToolbar({ workflowId, onTestExecutionStart }: WorkflowTo
     useWorkflowStore();
   const [isEditing, setIsEditing] = useState(false);
   const [validation, setValidation] = useState<ValidationResult | null>(null);
+  const [settingsOpen, setSettingsOpen] = useState(false);
 
   const createWorkflow = useCreateWorkflow();
   const updateWorkflow = useUpdateWorkflow();
@@ -263,6 +265,17 @@ export function WorkflowToolbar({ workflowId, onTestExecutionStart }: WorkflowTo
           </Button>
         </div>
 
+        <Button
+          variant="ghost"
+          size="icon"
+          onClick={() => setSettingsOpen(true)}
+          disabled={!workflowId}
+          title={!workflowId ? 'Save workflow first' : 'Workflow settings'}
+          className="h-8 w-8"
+        >
+          <Settings className="h-4 w-4" />
+        </Button>
+
         <ThemeToggle />
 
         <Button
@@ -302,6 +315,17 @@ export function WorkflowToolbar({ workflowId, onTestExecutionStart }: WorkflowTo
           {isSaving ? 'Saving...' : 'Save'}
         </Button>
       </div>
+
+      {/* Workflow Settings Dialog */}
+      {workflowId && (
+        <WorkflowSettingsDialog
+          open={settingsOpen}
+          onOpenChange={setSettingsOpen}
+          workflowId={workflowId}
+          workflowName={workflowName}
+          notificationEmail={workflow?.notificationEmail}
+        />
+      )}
     </div>
   );
 }
