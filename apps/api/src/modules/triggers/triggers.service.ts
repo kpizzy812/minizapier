@@ -525,6 +525,7 @@ export class TriggersService {
       case TriggerType.WEBHOOK:
         return {
           secret: nodeData.secret as string | undefined,
+          webhookUrl: nodeData.webhookUrl as string | undefined,
         };
       case TriggerType.EMAIL:
         return {
@@ -553,8 +554,12 @@ export class TriggersService {
     switch (dto.type) {
       case TriggerType.WEBHOOK: {
         const config = dto.config as WebhookConfigDto;
-        const token = this.webhookTrigger.generateWebhookToken();
-        const webhookUrl = this.webhookTrigger.generateWebhookUrl(token);
+        // Use webhookUrl from config if provided (pre-generated on frontend), otherwise generate new
+        let webhookUrl = config.webhookUrl;
+        if (!webhookUrl) {
+          const token = this.webhookTrigger.generateWebhookToken();
+          webhookUrl = this.webhookTrigger.generateWebhookUrl(token);
+        }
 
         return {
           config: {

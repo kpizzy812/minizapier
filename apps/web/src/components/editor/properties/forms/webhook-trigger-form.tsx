@@ -34,10 +34,10 @@ export function WebhookTriggerForm({ data, onUpdate }: WebhookTriggerFormProps) 
         />
       </FieldWrapper>
 
-      {/* Webhook URL - readonly, generated after save */}
+      {/* Webhook URL - readonly, auto-generated */}
       <FieldWrapper
         label="Webhook URL"
-        hint="Send HTTP requests to this URL to trigger the workflow. URL is generated after saving."
+        hint="Send HTTP requests to this URL to trigger the workflow."
       >
         {webhookUrl ? (
           <div className="space-y-2">
@@ -63,10 +63,7 @@ export function WebhookTriggerForm({ data, onUpdate }: WebhookTriggerFormProps) 
           </div>
         ) : (
           <div className="rounded-md bg-muted/50 p-3 text-sm text-muted-foreground">
-            <p>Webhook URL will be generated after you save the workflow.</p>
-            <p className="mt-1 text-xs">
-              You can send POST, GET, or any HTTP request to trigger this workflow.
-            </p>
+            <p>Webhook URL not available. Try removing and re-adding this trigger.</p>
           </div>
         )}
       </FieldWrapper>
@@ -88,8 +85,8 @@ export function WebhookTriggerForm({ data, onUpdate }: WebhookTriggerFormProps) 
       <div className="rounded-md border border-dashed p-3">
         <h4 className="mb-2 text-sm font-medium">How to use</h4>
         <ol className="space-y-1 text-xs text-muted-foreground">
-          <li>1. Save your workflow to generate the webhook URL</li>
-          <li>2. Send HTTP requests to the URL from your app or service</li>
+          <li>1. Copy the webhook URL above</li>
+          <li>2. Send HTTP requests (POST, GET, etc.) from your app or service</li>
           <li>3. The workflow will run with the request data</li>
         </ol>
       </div>

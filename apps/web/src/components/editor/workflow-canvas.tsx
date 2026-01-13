@@ -29,6 +29,17 @@ const generateEmailAddress = () => {
   return `${result}@${domain}`;
 };
 
+// Generate webhook URL with random token (similar to email generation)
+const generateWebhookUrl = () => {
+  const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_';
+  let token = '';
+  for (let i = 0; i < 32; i++) {
+    token += chars.charAt(Math.floor(Math.random() * chars.length));
+  }
+  const baseUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
+  return `${baseUrl}/webhooks/${token}`;
+};
+
 // Default data for each node type
 const defaultNodeData: Record<NodeTypeKey, Record<string, unknown>> = {
   webhookTrigger: {
@@ -183,10 +194,12 @@ export function WorkflowCanvas() {
         y: event.clientY,
       });
 
-      // Build node data with special handling for emailTrigger
+      // Build node data with special handling for triggers
       let nodeData = { ...defaultNodeData[nodeType] };
       if (nodeType === 'emailTrigger') {
         nodeData = { ...nodeData, address: generateEmailAddress() };
+      } else if (nodeType === 'webhookTrigger') {
+        nodeData = { ...nodeData, webhookUrl: generateWebhookUrl() };
       }
 
       const newNode = {

@@ -30,6 +30,15 @@ export class WebhookConfigDto {
   @IsString()
   @IsOptional()
   secret?: string;
+
+  @ApiPropertyOptional({
+    description:
+      'Webhook URL (auto-generated if not provided, can be pre-generated on frontend)',
+    example: 'https://api.example.com/webhooks/abc123',
+  })
+  @IsString()
+  @IsOptional()
+  webhookUrl?: string;
 }
 
 /**
