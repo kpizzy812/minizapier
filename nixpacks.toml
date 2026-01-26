@@ -3,7 +3,7 @@
 # Solution: Use onlyIncludeFiles to copy only build artifacts to run image
 
 [start]
-cmd = "node apps/api/dist/main"
+cmd = "node apps/api/dist/src/main.js"
 runImage = "node:22-slim"
 onlyIncludeFiles = [
     "apps/api/dist/**/*",

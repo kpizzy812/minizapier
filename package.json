@@ -7,7 +7,7 @@
     "node": ">=22.12.0"
   },
   "scripts": {
-    "start": "node apps/api/dist/main",
+    "start": "node apps/api/dist/src/main.js",
     "dev": "turbo run dev",
     "build": "turbo run build",
     "lint": "turbo run lint",
