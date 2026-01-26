@@ -6,9 +6,9 @@
 cmd = "node apps/api/dist/src/main.js"
 runImage = "node:22-slim"
 onlyIncludeFiles = [
-    "apps/api/dist/**/*",
-    "apps/api/prisma/**/*",
-    "apps/api/node_modules/**/*",
-    "node_modules/**/*",
+    "apps/api/dist",
+    "apps/api/prisma",
+    "apps/api/node_modules",
+    "node_modules",
     "package.json"
 ]
