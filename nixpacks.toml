@@ -1,0 +1,14 @@
+# Nixpacks configuration for monorepo
+# Problem: Default behavior copies source files AFTER build, overwriting dist/
+# Solution: Use onlyIncludeFiles to copy only build artifacts to run image
+
+[start]
+cmd = "node apps/api/dist/main"
+runImage = "node:22-slim"
+onlyIncludeFiles = [
+    "apps/api/dist",
+    "apps/api/prisma",
+    "apps/api/node_modules",
+    "node_modules",
+    "package.json"
+]
