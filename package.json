@@ -19,5 +19,16 @@
   },
   "devDependencies": {
     "turbo": "^2.5.3"
+  },
+  "pnpm": {
+    "onlyBuiltDependencies": [
+      "prisma",
+      "@prisma/engines",
+      "@prisma/client",
+      "esbuild",
+      "@nestjs/core",
+      "sharp",
+      "msgpackr-extract"
+    ]
   }
 }
